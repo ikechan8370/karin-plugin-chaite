@@ -1,16 +1,19 @@
 import path from 'path'
-import { dataDir } from '../../../../utils/common.js'
-import { SQLiteChannelStorage } from './channel_storage.js'
-import { LowDBChannelStorage } from '../lowdb/channel_storage.ts'
-import { SQLiteChatPresetStorage } from './chat_preset_storage.js'
-import { LowDBChatPresetsStorage } from '../lowdb/chat_preset_storage.ts'
-import { SQLiteToolsStorage } from './tools_storage.js'
-import { LowDBToolsStorage } from '../lowdb/tools_storage.js'
-import { SQLiteProcessorsStorage } from './processors_storage.js'
-import { LowDBProcessorsStorage } from '../lowdb/processors_storage.js'
-import { SQLiteUserStateStorage } from './user_state_storage.js'
-import { LowDBUserStateStorage } from '../lowdb/user_state_storage.js'
+import { dataDir } from '../../../../utils/common'
+import { SQLiteChannelStorage } from './channel_storage'
+import { LowDBChannelStorage } from '../lowdb/channel_storage'
+import { SQLiteChatPresetStorage } from './chat_preset_storage'
+import { LowDBChatPresetsStorage } from '../lowdb/chat_preset_storage'
+import { SQLiteToolsStorage } from './tools_storage'
+import { LowDBToolsStorage } from '../lowdb/tools_storage'
+import { SQLiteProcessorsStorage } from './processors_storage'
+import { LowDBProcessorsStorage } from '../lowdb/processors_storage'
+import { SQLiteUserStateStorage } from './user_state_storage'
+import { LowDBUserStateStorage } from '../lowdb/user_state_storage'
 import fs from 'fs'
+import { logger } from 'node-karin'
+import { ChaiteStorage, UserState } from 'chaite'
+import { LowDBCollection } from '../lowdb/storage.js'
 
 export async function checkMigrate () {
   logger.debug('检查是否需要从 LowDB 迁移数据到 SQLite...')
@@ -51,7 +54,7 @@ export async function checkMigrate () {
             await collection.set(newId, item)
 
             // 移除旧的无ID项
-            await collection.remove(item)
+            await collection.remove(item.id)
           }
 
           logger.info(`已成功修复${collectionName}中的${invalidItems.length}条无效数据`)
@@ -144,7 +147,12 @@ export async function checkMigrate () {
         await sqliteStorage.initialize()
 
         for (const item of items) {
-          await sqliteStorage.setItem(item.id, item)
+          if (pair.name === '用户状态') {
+            await (sqliteStorage as SQLiteUserStateStorage).setItem(item.userId + '', item as UserState)
+          } else {
+            // 对于其他类型，根据实际情况使用相应的类型断言
+            await (sqliteStorage as ChaiteStorage<unknown>).setItem(item.id, item)
+          }
         }
 
         logger.info(`迁移了 ${items.length} 个${pair.name}`)

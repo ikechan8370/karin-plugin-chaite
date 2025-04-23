@@ -1,14 +1,16 @@
+import { ChatGPTConfig } from '@/types/config'
 import { dirPath, basename } from '@/utils'
 import {
   watch,
   logger,
-  basePath,
+  karinPathBase,
   filesByExt,
   copyConfigSync,
   requireFileSync,
+  yaml,
 } from 'node-karin'
 
-const dir = `${basePath}/${basename}`
+const dir = `${karinPathBase}/${basename}`
 const dirConfig = `${dir}/config`
 
 const defDir = `${dirPath}/config`
@@ -25,7 +27,14 @@ copyConfigSync(defConfig, dirConfig, ['.yaml'])
 export const config = () => {
   const cfg = requireFileSync(`${dirConfig}/config.yaml`)
   const def = requireFileSync(`${defConfig}/config.yaml`)
-  return { ...def, ...cfg }
+  const data =  { ...def, ...cfg } as ChatGPTConfig
+  return Object.assign({}, data, {
+    save: () => {
+      yaml.save(`${dirConfig}/config.yaml`, data)
+    }
+  }) as ChatGPTConfig & {
+    save: () => void
+  }
 }
 
 /**

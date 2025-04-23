@@ -1,14 +1,16 @@
-import { ChaiteStorage, ProcessorDTO } from 'chaite'
+import { ChaiteStorage, ProcessorDTO, User } from 'chaite'
 import sqlite3 from 'sqlite3'
 import path from 'path'
 import fs from 'fs'
 import { generateId } from '../../../../utils/common.js'
 
-/**
- * @extends {ChaiteStorage<import('chaite').ProcessorDTO>}
- */
-export class SQLiteProcessorsStorage extends ChaiteStorage {
-  getName () {
+export class SQLiteProcessorsStorage extends ChaiteStorage<ProcessorDTO> {
+  private dbPath: string
+  private db: sqlite3.Database | null
+  private initialized: boolean
+  private tableName: string
+
+  getName (): string {
     return 'SQLiteProcessorsStorage'
   }
 
@@ -16,7 +18,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
    *
    * @param {string} dbPath 数据库文件路径
    */
-  constructor (dbPath) {
+  constructor (dbPath: string) {
     super()
     this.dbPath = dbPath
     this.db = null
@@ -28,11 +30,11 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
    * 初始化数据库连接和表结构
    * @returns {Promise<void>}
    */
-  async initialize () {
+  async initialize (): Promise<void> {
     if (this.initialized) return
 
-    return new Promise((resolve, reject) => {
-      // 确保��录存在
+    return new Promise<void>((resolve, reject) => {
+      // 确保目录存在
       const dir = path.dirname(this.dbPath)
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true })
@@ -44,7 +46,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
         }
 
         // 创建处理器表，将主要属性分列存储
-        this.db.run(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
+        this.db!.run(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT,
@@ -63,7 +65,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
           }
 
           // 创建索引
-          this.db.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_type ON ${this.tableName} (type)`, (err) => {
+          this.db!.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_type ON ${this.tableName} (type)`, (err) => {
             if (err) {
               return reject(err)
             }
@@ -78,7 +80,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   /**
    * 确保数据库已初始化
    */
-  async ensureInitialized () {
+  async ensureInitialized (): Promise<void> {
     if (!this.initialized) {
       await this.initialize()
     }
@@ -86,10 +88,10 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
 
   /**
    * 将 ProcessorDTO 对象转换为数据库记录
-   * @param {import('chaite').ProcessorDTO} processor
-   * @returns {Object} 数据库记录
+   * @param {ProcessorDTO} processor
+   * @returns {Record<string, any>} 数据库记录
    */
-  _processorToRecord (processor) {
+  _processorToRecord (processor: ProcessorDTO): Record<string, any> {
     // 提取主要字段
     const {
       id, name, description, type, code, cloudId,
@@ -114,14 +116,14 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
 
   /**
    * 将数据库记录转换为 ProcessorDTO 对象
-   * @param {Object} record 数据库记录
-   * @returns {import('chaite').ProcessorDTO} ProcessorDTO 对象
+   * @param {Record<string, any>} record 数据库记录
+   * @returns {ProcessorDTO | null} ProcessorDTO 对象
    */
-  _recordToProcessor (record) {
+  _recordToProcessor (record: Record<string, any> | undefined): ProcessorDTO | null {
     if (!record) return null
 
     // 解析 JSON 字段
-    let uploader = null
+    let uploader: Record<string, any> | null = null
     try {
       if (record.uploader) {
         uploader = JSON.parse(record.uploader)
@@ -130,7 +132,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
       // 解析错误，使用 null
     }
 
-    let extraData = {}
+    let extraData: Record<string, any> = {}
     try {
       if (record.extraData) {
         extraData = JSON.parse(record.extraData)
@@ -151,7 +153,7 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
       updatedAt: record.updatedAt,
       md5: record.md5,
       embedded: Boolean(record.embedded),
-      uploader,
+      uploader: uploader as User,
       ...extraData
     }
 
@@ -161,18 +163,18 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   /**
    * 获取单个处理器
    * @param {string} key 处理器ID
-   * @returns {Promise<import('chaite').ProcessorDTO>}
+   * @returns {Promise<ProcessorDTO | null>}
    */
-  async getItem (key) {
+  async getItem (key: string): Promise<ProcessorDTO | null> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [key], (err, row) => {
+    return new Promise<ProcessorDTO | null>((resolve, reject) => {
+      this.db!.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [key], (err, row) => {
         if (err) {
           return reject(err)
         }
 
-        const processor = this._recordToProcessor(row)
+        const processor = this._recordToProcessor(row as Record<string, any>)
         resolve(processor)
       })
     })
@@ -181,10 +183,10 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   /**
    * 保存处理器
    * @param {string} id 处理器ID
-   * @param {import('chaite').ProcessorDTO} processor 处理器对象
+   * @param {ProcessorDTO} processor 处理器对象
    * @returns {Promise<string>}
    */
-  async setItem (id, processor) {
+  async setItem (id: string, processor: ProcessorDTO): Promise<string> {
     await this.ensureInitialized()
     if (!id) {
       id = generateId()
@@ -207,8 +209,8 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
     const values = fields.map(field => record[field])
     const duplicateValues = [...values] // 用于ON CONFLICT时的更新
 
-    return new Promise((resolve, reject) => {
-      this.db.run(
+    return new Promise<string>((resolve, reject) => {
+      this.db!.run(
         `INSERT INTO ${this.tableName} (${fields.join(', ')})
          VALUES (${placeholders})
          ON CONFLICT(id) DO UPDATE SET ${updates}`,
@@ -224,15 +226,15 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   }
 
   /**
-   * 删除处���器
+   * 删除处理器
    * @param {string} key 处理器ID
    * @returns {Promise<void>}
    */
-  async removeItem (key) {
+  async removeItem (key: string): Promise<void> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [key], (err) => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [key], (err) => {
         if (err) {
           return reject(err)
         }
@@ -243,18 +245,18 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
 
   /**
    * 查询所有处理器
-   * @returns {Promise<import('chaite').ProcessorDTO[]>}
+   * @returns {Promise<ProcessorDTO[]>}
    */
-  async listItems () {
+  async listItems (): Promise<ProcessorDTO[]> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.all(`SELECT * FROM ${this.tableName}`, (err, rows) => {
+    return new Promise<ProcessorDTO[]>((resolve, reject) => {
+      this.db!.all(`SELECT * FROM ${this.tableName}`, (err, rows) => {
         if (err) {
           return reject(err)
         }
 
-        const processors = rows.map(row => this._recordToProcessor(row)).filter(Boolean)
+        const processors = rows.map(row => this._recordToProcessor(row as Record<string, any>)).filter(Boolean) as ProcessorDTO[]
         resolve(processors)
       })
     })
@@ -263,9 +265,9 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   /**
    * 根据条件筛选处理器
    * @param {Record<string, unknown>} filter 筛选条件
-   * @returns {Promise<import('chaite').ProcessorDTO[]>}
+   * @returns {Promise<ProcessorDTO[]>}
    */
-  async listItemsByEqFilter (filter) {
+  async listItemsByEqFilter (filter: Record<string, unknown>): Promise<ProcessorDTO[]> {
     await this.ensureInitialized()
 
     // 如果没有筛选条件，返回所有
@@ -275,9 +277,9 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
 
     // 尝试使用SQL字段直接过滤
     const directFields = ['id', 'name', 'description', 'type', 'cloudId']
-    const sqlFilters = []
-    const sqlParams = []
-    const extraFilters = {}
+    const sqlFilters: string[] = []
+    const sqlParams: any[] = []
+    const extraFilters: Record<string, unknown> = {}
     let hasExtraFilters = false
 
     // 区分数据库字段和额外字段
@@ -305,19 +307,19 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
       sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
 
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, sqlParams, (err, rows) => {
+    return new Promise<ProcessorDTO[]>((resolve, reject) => {
+      this.db!.all(sql, sqlParams, (err, rows: any[]) => {
         if (err) {
           return reject(err)
         }
 
-        let processors = rows.map(row => this._recordToProcessor(row)).filter(Boolean)
+        let processors = rows.map(row => this._recordToProcessor(row)).filter(Boolean) as ProcessorDTO[]
 
         // 如果有需要在内存中过滤的额外字段
         if (hasExtraFilters) {
           processors = processors.filter(processor => {
             for (const key in extraFilters) {
-              if (processor[key] !== extraFilters[key]) {
+              if ((processor as any)[key] !== extraFilters[key]) {
                 return false
               }
             }
@@ -331,11 +333,11 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
   }
 
   /**
-   * 根据IN条��筛选处理器
+   * 根据IN条件筛选处理器
    * @param {Array<{ field: string; values: unknown[]; }>} query
-   * @returns {Promise<import('chaite').ProcessorDTO[]>}
+   * @returns {Promise<ProcessorDTO[]>}
    */
-  async listItemsByInQuery (query) {
+  async listItemsByInQuery (query: Array<{ field: string; values: unknown[]; }>): Promise<ProcessorDTO[]> {
     await this.ensureInitialized()
 
     // 如果没有查询条件，返回所有
@@ -345,9 +347,9 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
 
     // 尝试使用SQL IN子句来优化查询
     const directFields = ['id', 'name', 'description', 'type', 'cloudId']
-    const sqlFilters = []
-    const sqlParams = []
-    const extraQueries = []
+    const sqlFilters: string[] = []
+    const sqlParams: any[] = []
+    const extraQueries: Array<{ field: string; values: unknown[]; }> = []
 
     // 处理每个查询条件
     for (const { field, values } of query) {
@@ -376,19 +378,19 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
       sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
 
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, sqlParams, (err, rows) => {
+    return new Promise<ProcessorDTO[]>((resolve, reject) => {
+      this.db!.all(sql, sqlParams, (err, rows: any[]) => {
         if (err) {
           return reject(err)
         }
 
-        let processors = rows.map(row => this._recordToProcessor(row)).filter(Boolean)
+        let processors = rows.map(row => this._recordToProcessor(row)).filter(Boolean) as ProcessorDTO[]
 
         // 如果有需要在内存中过滤的条件
         if (extraQueries.length > 0) {
           processors = processors.filter(processor => {
             for (const { field, values } of extraQueries) {
-              if (!values.includes(processor[field])) {
+              if (!values.includes((processor as any)[field])) {
                 return false
               }
             }
@@ -405,11 +407,11 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
    * 清空表中所有数据
    * @returns {Promise<void>}
    */
-  async clear () {
+  async clear (): Promise<void> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.run(`DELETE FROM ${this.tableName}`, (err) => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.run(`DELETE FROM ${this.tableName}`, (err) => {
         if (err) {
           return reject(err)
         }
@@ -422,11 +424,11 @@ export class SQLiteProcessorsStorage extends ChaiteStorage {
    * 关闭数据库连接
    * @returns {Promise<void>}
    */
-  async close () {
+  async close (): Promise<void> {
     if (!this.db) return Promise.resolve()
 
-    return new Promise((resolve, reject) => {
-      this.db.close(err => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.close(err => {
         if (err) {
           reject(err)
         } else {

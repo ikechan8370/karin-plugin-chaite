@@ -1,596 +1,571 @@
-import { AbstractHistoryManager } from 'chaite'
-import sqlite3 from 'sqlite3'
-import path from 'path'
-import fs from 'fs'
-import crypto from 'crypto'
+import { AbstractHistoryManager, HistoryMessage, TextContent } from 'chaite';
+import sqlite3 from 'sqlite3';
+import { Database } from 'sqlite3';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 
+/**
+ * SQLiteHistoryManager extends AbstractHistoryManager for managing chat history.
+ */
 export class SQLiteHistoryManager extends AbstractHistoryManager {
+  private dbPath: string;
+  private imagesDir: string;
+  private db: Database | null;
+  private initialized: boolean;
+  private tableName: string;
+
   /**
-   *
-   * @param {string} dbPath 数据库文件路径
-   * @param {string} imagesDir 图片存储目录，默认为数据库同级的 images 目录
+   * Constructor for SQLiteHistoryManager.
+   * @param {string} dbPath - Path to the database file.
+   * @param {string} imagesDir - Directory for storing images, defaults to 'images' directory at the same level as the database.
    */
-  constructor (dbPath, imagesDir) {
-    super()
-    this.dbPath = dbPath
-    this.imagesDir = imagesDir || path.join(path.dirname(dbPath), 'images')
-    this.db = null
-    this.initialized = false
-    this.tableName = 'history'
+  constructor(dbPath: string, imagesDir?: string) {
+    super();
+    this.dbPath = dbPath;
+    this.imagesDir = imagesDir || path.join(path.dirname(dbPath), 'images');
+    this.db = null;
+    this.initialized = false;
+    this.tableName = 'history';
   }
 
   /**
-   * 初始化数据库连接和表结构
+   * Initialize the database connection and table structure.
    * @returns {Promise<void>}
    */
-  async initialize () {
-    if (this.initialized) return
-
-    return new Promise((resolve, reject) => {
-      // 确保目录存在
-      const dir = path.dirname(this.dbPath)
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+    return new Promise<void>((resolve, reject) => {
+      // Ensure directory exists
+      const dir = path.dirname(this.dbPath);
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
+        fs.mkdirSync(dir, { recursive: true });
       }
-
-      // 确保图片目录存在
+      // Ensure images directory exists
       if (!fs.existsSync(this.imagesDir)) {
-        fs.mkdirSync(this.imagesDir, { recursive: true })
+        fs.mkdirSync(this.imagesDir, { recursive: true });
       }
-
-      this.db = new sqlite3.Database(this.dbPath, async (err) => {
+      this.db = new sqlite3.Database(this.dbPath, async (err: Error | null) => {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-
-        // 创建 history 表
-        this.db.run(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
+        // Create history table
+        this.db!.run(
+          `CREATE TABLE IF NOT EXISTS ${this.tableName} (
             id TEXT PRIMARY KEY,
             parentId TEXT,
             conversationId TEXT,
             role TEXT,
             messageData TEXT,
             createdAt TEXT
-          )`, (err) => {
-          if (err) {
-            return reject(err)
-          }
-
-          // 创建索引，加速查询
-          this.db.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_conversation ON ${this.tableName} (conversationId)`, (err) => {
+          )`,
+          (err: Error | null) => {
             if (err) {
-              return reject(err)
+              return reject(err);
             }
-
-            this.db.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_parent ON ${this.tableName} (parentId)`, (err) => {
-              if (err) {
-                return reject(err)
+            // Create indexes to speed up queries
+            this.db!.run(
+              `CREATE INDEX IF NOT EXISTS idx_${this.tableName}_conversation ON ${this.tableName} (conversationId)`,
+              (err: Error | null) => {
+                if (err) {
+                  return reject(err);
+                }
+                this.db!.run(
+                  `CREATE INDEX IF NOT EXISTS idx_${this.tableName}_parent ON ${this.tableName} (parentId)`,
+                  (err: Error | null) => {
+                    if (err) {
+                      return reject(err);
+                    }
+                    this.initialized = true;
+                    resolve();
+                  }
+                );
               }
-
-              this.initialized = true
-              resolve()
-            })
-          })
-        })
-      })
-    })
+            );
+          }
+        );
+      });
+    });
   }
 
   /**
-   * 确保数据库已初始化
+   * Ensure the database is initialized.
+   * @returns {Promise<void>}
    */
-  async ensureInitialized () {
+  async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
-      await this.initialize()
+      await this.initialize();
     }
   }
 
   /**
-   * 计算文本的md5值
-   * @param {string} text
-   * @returns {string}
+   * Calculate MD5 hash of text.
+   * @param {string} text - Text to hash.
+   * @returns {string} MD5 hash.
    */
-  _getMd5 (text) {
-    return crypto.createHash('md5').update(text).digest('hex')
+  private _getMd5(text: string): string {
+    return crypto.createHash('md5').update(text).digest('hex');
   }
 
   /**
-   * 是否为base64编码的图片
-   * @param {string} str
-   * @returns {boolean}
+   * Check if a string is a base64 encoded image.
+   * @param {string} str - String to check.
+   * @returns {boolean} Whether the string is a base64 encoded image.
    */
-  _isBase64Image (str) {
+  private _isBase64Image(str: string): boolean {
     if (!str || typeof str !== 'string') {
-      return false
+      return false;
     }
-
-    // 处理带前缀的 base64 格式
+    // Handle base64 format with prefix
     if (str.startsWith('data:image/')) {
-      return true
+      return true;
     }
-
-    // 处理纯 base64 字符串
-    // base64 编码只会包含字母、数字、+、/，以及末尾可能有 = 或 == 用于填充
-    return /^[A-Za-z0-9+/]+={0,2}$/.test(str)
+    // Handle pure base64 string
+    // Base64 encoding only contains letters, numbers, +, /, and may end with = or == for padding
+    return /^[A-Za-z0-9+/]+={0,2}$/.test(str);
   }
 
   /**
-   * 从base64提取图片的mime类型，或使用默认类型
-   * @param {string} base64
-   * @param {string} defaultMimeType 默认 MIME 类型
-   * @returns {string}
+   * Extract MIME type from base64 string or use a default type.
+   * @param {string} base64 - Base64 string.
+   * @param {string} defaultMimeType - Default MIME type.
+   * @returns {string} MIME type.
    */
-  _getMimeTypeFromBase64 (base64, defaultMimeType = 'image/jpeg') {
+  private _getMimeTypeFromBase64(base64: string, defaultMimeType = 'image/jpeg'): string {
     if (base64 && base64.startsWith('data:image/')) {
-      const match = base64.match(/^data:(image\/[a-zA-Z+]+);base64,/)
+      const match = base64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
       if (match) {
-        return match[1]
+        return match[1];
       }
     }
-    return defaultMimeType // 对于纯 base64 字符串，使用默认类型
+    return defaultMimeType; // For pure base64 strings, use default type
   }
 
   /**
-   * 获取图片扩展名
-   * @param {string} mimeType
-   * @returns {string}
+   * Get file extension from MIME type.
+   * @param {string} mimeType - MIME type.
+   * @returns {string} File extension.
    */
-  _getExtensionFromMimeType (mimeType) {
-    const map = {
+  private _getExtensionFromMimeType(mimeType: string): string {
+    const map: Record<string, string> = {
       'image/jpeg': '.jpg',
       'image/png': '.png',
       'image/gif': '.gif',
       'image/webp': '.webp',
-      'image/svg+xml': '.svg'
-    }
-    return map[mimeType] || '.png'
+      'image/svg+xml': '.svg',
+    };
+    return map[mimeType] || '.png';
   }
 
   /**
-   * 处理消息中的图片内容，将base64图片保存到本地文件
-   * @param {object} message
-   * @returns {object} 处理后的消息对象
+   * Process images in message content, saving base64 images to local files.
+   * @param {HistoryMessage} message - Message object.
+   * @returns {HistoryMessage} Processed message object.
    */
-  _processMessageImages (message) {
+  private _processMessageImages(message: HistoryMessage): HistoryMessage {
     if (!message.content || !Array.isArray(message.content)) {
-      return message
+      return message;
     }
-
-    // 深拷贝避免修改原对象
-    const processedMessage = JSON.parse(JSON.stringify(message))
-
-    processedMessage.content = processedMessage.content.map(item => {
+    // Deep copy to avoid modifying the original object
+    const processedMessage = JSON.parse(JSON.stringify(message)) as HistoryMessage;
+    processedMessage.content = processedMessage.content.map((item: any) => {
       if (item.type === 'image' && item.image) {
-        // 检查是否是base64图片数据
+        // Check if it's base64 image data
         if (this._isBase64Image(item.image)) {
-          let base64Data = item.image
-          let mimeType = item.mimeType || 'image/jpeg' // 使用项目指定的 MIME 类型或默认值
-
-          // 如果是data:image格式，提取纯base64部分
+          let base64Data = item.image;
+          let mimeType = item.mimeType || 'image/jpeg'; // Use specified MIME type or default
+          // If it's data:image format, extract pure base64 part
           if (base64Data.startsWith('data:')) {
-            const parts = base64Data.split(',')
+            const parts = base64Data.split(',');
             if (parts.length > 1) {
-              base64Data = parts[1]
-              // 更新 MIME 类型
-              mimeType = this._getMimeTypeFromBase64(item.image, mimeType)
+              base64Data = parts[1];
+              // Update MIME type
+              mimeType = this._getMimeTypeFromBase64(item.image, mimeType);
             }
           }
-
           try {
-            // 计算MD5
-            const md5 = this._getMd5(base64Data)
-            const ext = this._getExtensionFromMimeType(mimeType)
-            const filePath = path.join(this.imagesDir, `${md5}${ext}`)
-
-            // 如果文件不存在，则保存
+            // Calculate MD5
+            const md5 = this._getMd5(base64Data);
+            const ext = this._getExtensionFromMimeType(mimeType);
+            const filePath = path.join(this.imagesDir, `${md5}${ext}`);
+            // Save if file does not exist
             if (!fs.existsSync(filePath)) {
-              fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'))
+              fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
             }
-
-            // 替换为引用格式: $image:md5:ext
-            item.image = `$image:${md5}:${ext}`
-            item._type = mimeType // 保存原始类型
+            // Replace with reference format: $image:md5:ext
+            item.image = `$image:${md5}:${ext}`;
+            item._type = mimeType; // Save original type
           } catch (error) {
-            console.error('保存图片失败:', error)
+            console.error('Failed to save image:', error);
           }
         }
       }
-      return item
-    })
-
-    return processedMessage
+      return item;
+    });
+    return processedMessage;
   }
 
   /**
-   * 恢复消息中的图片引用，转换回base64
-   * @param {object} message
-   * @returns {object} 处理后的消息对象
+   * Restore image references in message content, converting back to base64.
+   * @param {HistoryMessage} message - Message object.
+   * @returns {HistoryMessage} Processed message object.
    */
-  _restoreMessageImages (message) {
+  private _restoreMessageImages(message: HistoryMessage): HistoryMessage {
     if (!message || !message.content || !Array.isArray(message.content)) {
-      return message
+      return message;
     }
-
-    // 深拷贝避免修改原对象
-    const restoredMessage = JSON.parse(JSON.stringify(message))
-
-    // 标记是否需要添加[图片]文本
-    let needImageText = true
-    let hasRemovedImage = false
-
-    restoredMessage.content = restoredMessage.content.filter((item, index) => {
+    // Deep copy to avoid modifying the original object
+    const restoredMessage = JSON.parse(JSON.stringify(message)) as HistoryMessage;
+    // Flag to check if we need to add "[图片]" text
+    let needImageText = true;
+    let hasRemovedImage = false;
+    restoredMessage.content = restoredMessage.content.filter((item: any, index: number) => {
       if (item.type === 'image' && item.image && typeof item.image === 'string') {
-        // 检查是否是图片引用格式
-        const match = item.image.match(/^\$image:([a-f0-9]+):(\.[a-z]+)$/)
+        // Check if it's an image reference format
+        const match = item.image.match(/^\$image:([a-f0-9]+):(\.[a-z]+)$/);
         if (match) {
-          // eslint-disable-next-line no-unused-vars
-          const [_, md5, ext] = match
-          const filePath = path.join(this.imagesDir, `${md5}${ext}`)
-
-          // 检查文件是否存在
+          const [_, md5, ext] = match;
+          const filePath = path.join(this.imagesDir, `${md5}${ext}`);
+          // Check if file exists
           if (fs.existsSync(filePath)) {
             try {
-              // 读取文件并转换为base64
-              const imageBuffer = fs.readFileSync(filePath)
-              item.image = imageBuffer.toString('base64')
-              return true
+              // Read file and convert to base64
+              const imageBuffer = fs.readFileSync(filePath);
+              item.image = imageBuffer.toString('base64');
+              return true;
             } catch (error) {
-              console.error('读取图片文件失败:', filePath, error)
-              hasRemovedImage = true
-              return false
+              console.error('Failed to read image file:', filePath, error);
+              hasRemovedImage = true;
+              return false;
             }
           } else {
-            // 文件不存在，删除这个image元素
-            hasRemovedImage = true
-            return false
+            // File does not exist, remove this image element
+            hasRemovedImage = true;
+            return false;
           }
         }
       }
       if (item.type === 'text') {
-        needImageText = false
+        needImageText = false;
       }
-      return true
-    })
-
-    // 如果移除了图片且没有文本内容，添加[图片]提示
+      return true;
+    });
+    // If images were removed and there is no text content, add "[图片]" hint
     if (hasRemovedImage) {
       if (restoredMessage.content.length === 0) {
         restoredMessage.content.push({
           type: 'text',
-          text: '[图片]'
-        })
+          text: '[图片]',
+        } as TextContent);
       } else if (needImageText) {
-        // 查找第一个文本元素
-        const textIndex = restoredMessage.content.findIndex(item => item.type === 'text')
+        // Find the first text element
+        const textIndex = restoredMessage.content.findIndex((item) => item.type === 'text');
         if (textIndex !== -1) {
-          restoredMessage.content[textIndex].text = `[图片] ${restoredMessage.content[textIndex].text}`
+          (restoredMessage.content[textIndex] as any).text = `[图片] ${(restoredMessage.content[textIndex] as any).text}`;
         } else {
-          // 如果没有文本元素，添加一个
+          // If no text element, add one
           restoredMessage.content.unshift({
             type: 'text',
-            text: '[图片]'
-          })
+            text: '[图片]',
+          } as TextContent);
         }
       }
     }
-
-    return restoredMessage
+    return restoredMessage;
   }
 
   /**
-   * 将消息对象转换为数据库记录
-   * @param {import('chaite').HistoryMessage} message
-   * @param {string} conversationId
-   * @returns {Object} 数据库记录
+   * Convert message object to database record.
+   * @param {HistoryMessage} message - Message object.
+   * @param {string} conversationId - Conversation ID.
+   * @returns {Record<string, any>} Database record.
    */
-  _messageToRecord (message, conversationId) {
-    // 处理图片，将base64图片保存到本地文件
-    const processedMessage = this._processMessageImages(message)
-
-    // 将 content 和 toolCalls 等转为 JSON
-    const { id, parentId, role } = processedMessage
-    const messageData = JSON.stringify(processedMessage)
-
+  private _messageToRecord(message: HistoryMessage, conversationId: string): Record<string, any> {
+    // Process images, saving base64 images to local files
+    const processedMessage = this._processMessageImages(message);
+    // Convert content and toolCalls to JSON
+    const { id, parentId, role } = processedMessage;
+    const messageData = JSON.stringify(processedMessage);
     return {
       id: id || '',
       parentId: parentId || null,
       conversationId: conversationId || '',
       role: role || '',
       messageData,
-      createdAt: new Date().toISOString()
-    }
+      createdAt: new Date().toISOString(),
+    };
   }
 
   /**
-   * 将数据库记录转换为消息对象
-   * @param {Object} record 数据库记录
-   * @returns {import('chaite').HistoryMessage} 消息对象
+   * Convert database record to message object.
+   * @param {Record<string, any> | undefined} record - Database record.
+   * @returns {HistoryMessage | undefined} Message object.
    */
-  _recordToMessage (record) {
-    if (!record) return null
-
+  private _recordToMessage(record: Record<string, any> | undefined): HistoryMessage | undefined {
+    if (!record) return undefined;
     try {
-      // 解析存储的消息数据
-      const message = JSON.parse(record.messageData)
-
-      // 恢复图片引用为base64
-      return this._restoreMessageImages(message)
+      // Parse stored message data
+      const message = JSON.parse(record.messageData) as HistoryMessage;
+      // Restore image references to base64
+      return this._restoreMessageImages(message);
     } catch (e) {
-      // 解析失败，尝试构造最小结构
+      // Parsing failed, attempt to construct minimal structure
       return {
         id: record.id,
         parentId: record.parentId,
         role: record.role,
-        conversationId: record.conversationId,
-        content: []
-      }
+        content: [],
+      };
     }
   }
 
   /**
-   * 保存历史消息
-   * @param {import('chaite').HistoryMessage} message 消息对象
-   * @param {string} conversationId 会话ID
+   * Save history message.
+   * @param {HistoryMessage} message - Message object.
+   * @param {string} conversationId - Conversation ID.
    * @returns {Promise<void>}
    */
-  async saveHistory (message, conversationId) {
-    await this.ensureInitialized()
-
-    const record = this._messageToRecord(message, conversationId)
-
-    return new Promise((resolve, reject) => {
-      // 检查消息是否已存在
+  async saveHistory(message: HistoryMessage, conversationId: string): Promise<void> {
+    await this.ensureInitialized();
+    const record = this._messageToRecord(message, conversationId);
+    return new Promise<void>((resolve, reject) => {
+      // Check if message already exists
       if (message.id) {
-        this.db.get(`SELECT id FROM ${this.tableName} WHERE id = ?`, [message.id], (err, row) => {
+        this.db!.get(`SELECT id FROM ${this.tableName} WHERE id = ?`, [message.id], (err: Error | null, row: any) => {
           if (err) {
-            return reject(err)
+            return reject(err);
           }
-
           if (row) {
-            // 消息已存在，更新
-            const fields = Object.keys(record)
-            const updates = fields.map(field => `${field} = ?`).join(', ')
-            const values = fields.map(field => record[field])
-
-            this.db.run(`UPDATE ${this.tableName} SET ${updates} WHERE id = ?`, [...values, message.id], (err) => {
+            // Message exists, update
+            const fields = Object.keys(record);
+            const updates = fields.map((field) => `${field} = ?`).join(', ');
+            const values = fields.map((field) => record[field]);
+            this.db!.run(`UPDATE ${this.tableName} SET ${updates} WHERE id = ?`, [...values, message.id], (err: Error | null) => {
               if (err) {
-                return reject(err)
+                return reject(err);
               }
-              resolve()
-            })
+              resolve();
+            });
           } else {
-            // 消息不存在，插入
-            this._insertMessage(record, resolve, reject)
+            // Message does not exist, insert
+            this._insertMessage(record, resolve, reject);
           }
-        })
+        });
       } else {
-        // 没有ID，直接插入
-        this._insertMessage(record, resolve, reject)
+        // No ID, insert directly
+        this._insertMessage(record, resolve, reject);
       }
-    })
+    });
   }
 
   /**
-   * 内部方法：插入消息记录
+   * Internal method: Insert message record.
    * @private
+   * @param {Record<string, any>} record - Database record.
+   * @param {Function} resolve - Resolve function for Promise.
+   * @param {Function} reject - Reject function for Promise.
    */
-  _insertMessage (record, resolve, reject) {
-    const fields = Object.keys(record)
-    const placeholders = fields.map(() => '?').join(', ')
-    const values = fields.map(field => record[field])
-
-    this.db.run(
+  private _insertMessage(record: Record<string, any>, resolve: (value: void | PromiseLike<void>) => void, reject: (reason?: any) => void): void {
+    const fields = Object.keys(record);
+    const placeholders = fields.map(() => '?').join(', ');
+    const values = fields.map((field) => record[field]);
+    this.db!.run(
       `INSERT INTO ${this.tableName} (${fields.join(', ')}) VALUES (${placeholders})`,
       values,
-      function (err) {
+      function (err: Error | null) {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-        resolve()
+        resolve();
       }
-    )
+    );
   }
 
   /**
-   * 获取历史消息
-   * @param {string} messageId 消息ID
-   * @param {string} conversationId 会话ID
-   * @returns {Promise<import('chaite').HistoryMessage[]>}
+   * Get history messages.
+   * @param {string} messageId - Message ID.
+   * @param {string} conversationId - Conversation ID.
+   * @returns {Promise<HistoryMessage[]>}
    */
-  async getHistory (messageId, conversationId) {
-    await this.ensureInitialized()
-
+  async getHistory(messageId?: string, conversationId?: string): Promise<HistoryMessage[]> {
+    await this.ensureInitialized();
     if (messageId) {
-      return this._getMessageChain(messageId)
+      return this._getMessageChain(messageId);
     } else if (conversationId) {
-      return this._getConversationMessages(conversationId)
+      return this._getConversationMessages(conversationId);
     }
-    return []
+    return [];
   }
 
   /**
-   * 获取消息链（从指定消息追溯到根消息）
+   * Get message chain (from specified message back to root message).
    * @private
+   * @param {string} messageId - Message ID.
+   * @returns {Promise<HistoryMessage[]>}
    */
-  async _getMessageChain (messageId) {
-    return new Promise((resolve, reject) => {
-      const messages = []
-      const getMessageById = (id) => {
+  private async _getMessageChain(messageId: string): Promise<HistoryMessage[]> {
+    return new Promise<HistoryMessage[]>((resolve, reject) => {
+      const messages: HistoryMessage[] = [];
+      const getMessageById = (id: string | null) => {
         if (!id) {
-          resolve(messages)
-          return
+          resolve(messages);
+          return;
         }
-
-        this.db.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id], (err, row) => {
+        this.db!.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id], (err: Error | null, row: any) => {
           if (err) {
-            return reject(err)
+            return reject(err);
           }
-
           if (!row) {
-            resolve(messages)
-            return
+            resolve(messages);
+            return;
           }
-
-          const message = this._recordToMessage(row)
-          messages.unshift(message) // 将消息添加到数组开头
-
-          getMessageById(row.parentId) // 递归获取父消息
-        })
-      }
-
-      getMessageById(messageId)
-    })
+          const message = this._recordToMessage(row);
+          if (message) {
+            messages.unshift(message); // Add message to the beginning of array
+          }
+          getMessageById(row.parentId); // Recursively get parent message
+        });
+      };
+      getMessageById(messageId);
+    });
   }
 
   /**
-   * 获取会话中的所有消息
+   * Get all messages in a conversation.
    * @private
+   * @param {string} conversationId - Conversation ID.
+   * @returns {Promise<HistoryMessage[]>}
    */
-  async _getConversationMessages (conversationId) {
-    return new Promise((resolve, reject) => {
-      this.db.all(`SELECT * FROM ${this.tableName} WHERE conversationId = ? ORDER BY createdAt`, [conversationId], (err, rows) => {
+  private async _getConversationMessages(conversationId: string): Promise<HistoryMessage[]> {
+    return new Promise<HistoryMessage[]>((resolve, reject) => {
+      this.db!.all(`SELECT * FROM ${this.tableName} WHERE conversationId = ? ORDER BY createdAt`, [conversationId], (err: Error | null, rows: any[]) => {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-
-        const messages = rows.map(row => this._recordToMessage(row)).filter(Boolean)
-        resolve(messages)
-      })
-    })
+        const messages = rows.map((row) => this._recordToMessage(row)).filter(Boolean) as HistoryMessage[];
+        resolve(messages);
+      });
+    });
   }
 
   /**
-   * 删除会话
-   * @param {string} conversationId 会话ID
+   * Delete a conversation.
+   * @param {string} conversationId - Conversation ID.
    * @returns {Promise<void>}
    */
-  async deleteConversation (conversationId) {
-    await this.ensureInitialized()
-
-    return new Promise((resolve, reject) => {
-      this.db.run(`DELETE FROM ${this.tableName} WHERE conversationId = ?`, [conversationId], (err) => {
+  async deleteConversation(conversationId: string): Promise<void> {
+    await this.ensureInitialized();
+    return new Promise<void>((resolve, reject) => {
+      this.db!.run(`DELETE FROM ${this.tableName} WHERE conversationId = ?`, [conversationId], (err: Error | null) => {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-        resolve()
-      })
-    })
+        resolve();
+      });
+    });
   }
 
   /**
-   * 获取单条历史消息
-   * @param {string} messageId 消息ID
-   * @param {string} conversationId 会话ID
-   * @returns {Promise<import('chaite').HistoryMessage | null>}
+   * Get a single history message.
+   * @param {string} messageId - Message ID.
+   * @param {string} conversationId - Conversation ID.
+   * @returns {Promise<HistoryMessage | null>}
    */
-  async getOneHistory (messageId, conversationId) {
-    await this.ensureInitialized()
-
-    return new Promise((resolve, reject) => {
-      const conditions = []
-      const params = []
-
+  async getOneHistory(messageId: string, conversationId: string): Promise<HistoryMessage | undefined> {
+    await this.ensureInitialized();
+    return new Promise<HistoryMessage | undefined>((resolve, reject) => {
+      const conditions: string[] = [];
+      const params: string[] = [];
       if (messageId) {
-        conditions.push('id = ?')
-        params.push(messageId)
+        conditions.push('id = ?');
+        params.push(messageId);
       }
-
       if (conversationId) {
-        conditions.push('conversationId = ?')
-        params.push(conversationId)
+        conditions.push('conversationId = ?');
+        params.push(conversationId);
       }
-
       if (conditions.length === 0) {
-        return resolve(null)
+        return resolve(undefined);
       }
-
-      const whereClause = conditions.join(' AND ')
-
-      this.db.get(`SELECT * FROM ${this.tableName} WHERE ${whereClause} LIMIT 1`, params, (err, row) => {
+      const whereClause = conditions.join(' AND ');
+      this.db!.get(`SELECT * FROM ${this.tableName} WHERE ${whereClause} LIMIT 1`, params, (err: Error | null, row: any) => {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-
-        resolve(this._recordToMessage(row))
-      })
-    })
+        resolve(this._recordToMessage(row));
+      });
+    });
   }
 
   /**
-   * 清理未引用的图片文件
-   * @returns {Promise<{deleted: number, total: number}>}
+   * Clean up unused image files.
+   * @returns {Promise<{ deleted: number; total: number }>}
    */
-  async cleanupUnusedImages () {
-    await this.ensureInitialized()
-
-    return new Promise((resolve, reject) => {
-      // 获取所有消息数据
-      this.db.all(`SELECT messageData FROM ${this.tableName}`, async (err, rows) => {
+  async cleanupUnusedImages(): Promise<{ deleted: number; total: number }> {
+    await this.ensureInitialized();
+    return new Promise<{ deleted: number; total: number }>((resolve, reject) => {
+      // Get all message data
+      this.db!.all(`SELECT messageData FROM ${this.tableName}`, async (err: Error | null, rows: any[]) => {
         if (err) {
-          return reject(err)
+          return reject(err);
         }
-
         try {
-          // 从数据库中提取所有图片引用
-          const usedImageRefs = new Set()
-          rows.forEach(row => {
+          // Extract all image references from database
+          const usedImageRefs = new Set<string>();
+          rows.forEach((row) => {
             try {
-              const message = JSON.parse(row.messageData)
+              const message = JSON.parse(row.messageData);
               if (message.content && Array.isArray(message.content)) {
-                message.content.forEach(item => {
+                message.content.forEach((item: any) => {
                   if (item.type === 'image' && typeof item.image === 'string') {
-                    const match = item.image.match(/^\$image:([a-f0-9]+):(\.[a-z]+)$/)
+                    const match = item.image.match(/^\$image:([a-f0-9]+):(\.[a-z]+)$/);
                     if (match) {
-                      usedImageRefs.add(`${match[1]}${match[2]}`)
+                      usedImageRefs.add(`${match[1]}${match[2]}`);
                     }
                   }
-                })
+                });
               }
             } catch (e) {
-              // 忽略解析错误
+              // Ignore parsing errors
             }
-          })
-
-          // 获取图片目录中的所有文件
-          const files = fs.readdirSync(this.imagesDir)
-
-          // 删除未引用的图片
-          let deletedCount = 0
+          });
+          // Get all files in images directory
+          const files = fs.readdirSync(this.imagesDir);
+          // Delete unreferenced images
+          let deletedCount = 0;
           for (const file of files) {
             if (!usedImageRefs.has(file)) {
-              fs.unlinkSync(path.join(this.imagesDir, file))
-              deletedCount++
+              fs.unlinkSync(path.join(this.imagesDir, file));
+              deletedCount++;
             }
           }
-
           resolve({
             deleted: deletedCount,
-            total: files.length
-          })
+            total: files.length,
+          });
         } catch (error) {
-          reject(error)
+          reject(error);
         }
-      })
-    })
+      });
+    });
   }
 
   /**
-   * 关闭数据库连接
+   * Close the database connection.
    * @returns {Promise<void>}
    */
-  async close () {
-    if (!this.db) return Promise.resolve()
-
-    return new Promise((resolve, reject) => {
-      this.db.close(err => {
+  async close(): Promise<void> {
+    if (!this.db) return Promise.resolve();
+    return new Promise<void>((resolve, reject) => {
+      this.db!.close((err: Error | null) => {
         if (err) {
-          reject(err)
+          reject(err);
         } else {
-          this.initialized = false
-          this.db = null
-          resolve()
+          this.initialized = false;
+          this.db = null;
+          resolve();
         }
-      })
-    })
+      });
+    });
   }
 }

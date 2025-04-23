@@ -1,11 +1,16 @@
-import { ChaiteStorage, Channel } from 'chaite'
+import { BaseClientOptions, ChaiteStorage, Channel, ChannelStatistics, SendMessageOption, User } from 'chaite'
 import sqlite3 from 'sqlite3'
 import path from 'path'
 import fs from 'fs'
 import { generateId } from '../../../../utils/common.js'
 
 export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
-  getName () {
+  private dbPath: string
+  private db: sqlite3.Database | null
+  private initialized: boolean
+  private tableName: string
+
+  getName (): string {
     return 'SQLiteChannelStorage'
   }
 
@@ -13,7 +18,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
    *
    * @param {string} dbPath 数据库文件路径
    */
-  constructor (dbPath) {
+  constructor (dbPath: string) {
     super()
     this.dbPath = dbPath
     this.db = null
@@ -25,10 +30,10 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
    * 初始化数据库连接和表结构
    * @returns {Promise<void>}
    */
-  async initialize () {
+  async initialize (): Promise<void> {
     if (this.initialized) return
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       // 确保目录存在
       const dir = path.dirname(this.dbPath)
       if (!fs.existsSync(dir)) {
@@ -41,7 +46,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
         }
 
         // 创建Channel表，将主要属性分列存储
-        this.db.run(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
+        this.db!.run(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           description TEXT,
@@ -69,14 +74,14 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
           // 创建索引提高查询性能
           const promises = [
             // 按类型和状态索引
-            new Promise((resolve, reject) => {
-              this.db.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_type ON ${this.tableName} (type)`, err => {
+            new Promise<void>((resolve, reject) => {
+              this.db!.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_type ON ${this.tableName} (type)`, err => {
                 if (err) reject(err)
                 else resolve()
               })
             }),
-            new Promise((resolve, reject) => {
-              this.db.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_status ON ${this.tableName} (status)`, err => {
+            new Promise<void>((resolve, reject) => {
+              this.db!.run(`CREATE INDEX IF NOT EXISTS idx_${this.tableName}_status ON ${this.tableName} (status)`, err => {
                 if (err) reject(err)
                 else resolve()
               })
@@ -97,7 +102,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   /**
    * 确保数据库已初始化
    */
-  async ensureInitialized () {
+  async ensureInitialized (): Promise<void> {
     if (!this.initialized) {
       await this.initialize()
     }
@@ -105,10 +110,10 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
 
   /**
    * 将 Channel 对象转换为数据库记录
-   * @param {import('chaite').Channel} channel
-   * @returns {Object} 数据库记录
+   * @param {Channel} channel
+   * @returns {Record<string, any>} 数据库记录
    */
-  _channelToRecord (channel) {
+  _channelToRecord (channel: Channel): Record<string, any> {
     // 提取主要字段
     const {
       id, name, description, adapterType, type, weight, priority,
@@ -141,14 +146,14 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
 
   /**
    * 将数据库记录转换为 Channel 对象
-   * @param {Object} record 数据库记录
-   * @returns {import('chaite').Channel} Channel 对象
+   * @param {Record<string, any>} record 数据库记录
+   * @returns {Channel | null} Channel 对象
    */
-  _recordToChannel (record) {
+  _recordToChannel (record: Record<string, any> | undefined): Channel | null {
     if (!record) return null
 
     // 解析JSON字段
-    let models = []
+    let models: any[] = []
     try {
       if (record.models) {
         models = JSON.parse(record.models)
@@ -157,7 +162,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       // 解析错误，使用空数组
     }
 
-    let options = {}
+    let options: Partial<BaseClientOptions> = {}
     try {
       if (record.options) {
         options = JSON.parse(record.options)
@@ -166,7 +171,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       // 解析错误，使用空对象
     }
 
-    let statistics = {}
+    let statistics: Record<string, any> = {}
     try {
       if (record.statistics) {
         statistics = JSON.parse(record.statistics)
@@ -175,7 +180,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       // 解析错误，使用空对象
     }
 
-    let uploader = null
+    let uploader: Record<string, any> | null = null
     try {
       if (record.uploader) {
         uploader = JSON.parse(record.uploader)
@@ -184,7 +189,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       // 解析错误，使用null
     }
 
-    let extra = {}
+    let extra: Record<string, any> = {}
     try {
       if (record.extra) {
         extra = JSON.parse(record.extra)
@@ -205,9 +210,9 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       status: record.status,
       disabledReason: record.disabledReason,
       models,
-      options,
-      statistics,
-      uploader,
+      options: BaseClientOptions.create(options),
+      statistics: statistics as ChannelStatistics,
+      uploader: uploader as User,
       cloudId: record.cloudId,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
@@ -222,18 +227,18 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   /**
    * 获取单个渠道
    * @param {string} key 渠道ID
-   * @returns {Promise<import('chaite').Channel>}
+   * @returns {Promise<Channel | null>}
    */
-  async getItem (key): Promise<Channel> {
+  async getItem (key: string): Promise<Channel | null> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [key], (err, row) => {
+    return new Promise<Channel | null>((resolve, reject) => {
+      this.db!.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [key], (err, row) => {
         if (err) {
           return reject(err)
         }
 
-        const channel = this._recordToChannel(row)
+        const channel = this._recordToChannel(row as Record<string, any>)
         resolve(channel)
       })
     })
@@ -242,7 +247,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   /**
    * 保存渠道
    * @param {string} id 渠道ID
-   * @param {import('chaite').Channel} channel 渠道对象
+   * @param {Channel} channel 渠道对象
    * @returns {Promise<string>}
    */
   async setItem (id: string, channel: Channel): Promise<string> {
@@ -268,8 +273,8 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
     const values = fields.map(field => record[field])
     const duplicateValues = [...values] // 用于ON CONFLICT时的更新
 
-    return new Promise((resolve, reject) => {
-      this.db.run(
+    return new Promise<string>((resolve, reject) => {
+      this.db!.run(
         `INSERT INTO ${this.tableName} (${fields.join(', ')})
          VALUES (${placeholders})
          ON CONFLICT(id) DO UPDATE SET ${updates}`,
@@ -292,8 +297,8 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   async removeItem (key: string): Promise<void> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [key], (err) => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [key], (err) => {
         if (err) {
           return reject(err)
         }
@@ -304,18 +309,18 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
 
   /**
    * 查询所有渠道
-   * @returns {Promise<import('chaite').Channel[]>}
+   * @returns {Promise<Channel[]>}
    */
   async listItems (): Promise<Channel[]> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.all(`SELECT * FROM ${this.tableName}`, (err, rows) => {
+    return new Promise<Channel[]>((resolve, reject) => {
+      this.db!.all(`SELECT * FROM ${this.tableName}`, (err, rows) => {
         if (err) {
           return reject(err)
         }
 
-        const channels = rows.map(row => this._recordToChannel(row)).filter(Boolean)
+        const channels = rows.map(row => this._recordToChannel(row as Record<string, any>)).filter(Boolean) as Channel[]
         resolve(channels)
       })
     })
@@ -324,7 +329,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   /**
    * 根据条件筛选渠道
    * @param {Record<string, unknown>} filter 筛选条件
-   * @returns {Promise<import('chaite').Channel[]>}
+   * @returns {Promise<Channel[]>}
    */
   async listItemsByEqFilter (filter: Record<string, unknown>): Promise<Channel[]> {
     await this.ensureInitialized()
@@ -337,9 +342,9 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
     // 尝试使用SQL字段直接过滤
     const directFields = ['id', 'name', 'description', 'adapterType', 'type', 'status', 'cloudId']
     const numericFields = ['weight', 'priority']
-    const sqlFilters = []
-    const sqlParams = []
-    const extraFilters = {}
+    const sqlFilters: string[] = []
+    const sqlParams: any[] = []
+    const extraFilters: Record<string, unknown> = {}
     let hasExtraFilters = false
 
     // 区分数据库字段和额外字段
@@ -376,19 +381,20 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
 
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, sqlParams, (err, rows) => {
+    return new Promise<Channel[]>((resolve, reject) => {
+      this.db!.all(sql, sqlParams, (err, rows: any[]) => {
         if (err) {
           return reject(err)
         }
 
-        let channels = rows.map(row => this._recordToChannel(row)).filter(Boolean)
+        let channels = rows.map(row => this._recordToChannel(row)).filter(Boolean) as Channel[]
 
-        // 如果有需要在内存中过滤的额外���段
+        // 如果有需要在内存中过滤的额外字段
         if (hasExtraFilters) {
           channels = channels.filter(channel => {
             for (const key in extraFilters) {
-              if (channel[key] !== extraFilters[key]) {
+              const channelKey = key as keyof typeof channel
+              if (channel[channelKey] !== extraFilters[key]) {
                 return false
               }
             }
@@ -404,7 +410,7 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
   /**
    * 根据IN条件筛选渠道
    * @param {Array<{ field: string; values: unknown[]; }>} query
-   * @returns {Promise<import('chaite').Channel[]>}
+   * @returns {Promise<Channel[]>}
    */
   async listItemsByInQuery (query: Array<{ field: string; values: unknown[]; }>): Promise<Channel[]> {
     await this.ensureInitialized()
@@ -417,9 +423,9 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
     // 尝试使用SQL IN子句来优化查询
     const directFields = ['id', 'name', 'description', 'adapterType', 'type', 'status', 'cloudId']
     const numericFields = ['weight', 'priority']
-    const sqlFilters = []
-    const sqlParams = []
-    const extraQueries = []
+    const sqlFilters: string[] = []
+    const sqlParams: any[] = []
+    const extraQueries: Array<{ field: string; values: unknown[]; }> = []
 
     // 处理每个查询条件
     for (const { field, values } of query) {
@@ -461,19 +467,20 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
       sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
 
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, sqlParams, (err, rows) => {
+    return new Promise<Channel[]>((resolve, reject) => {
+      this.db!.all(sql, sqlParams, (err, rows: any[]) => {
         if (err) {
           return reject(err)
         }
 
-        let channels = rows.map(row => this._recordToChannel(row)).filter(Boolean)
+        let channels = rows.map(row => this._recordToChannel(row)).filter(Boolean) as Channel[]
 
         // 如果有需要在内存中过滤的条件
         if (extraQueries.length > 0) {
           channels = channels.filter(channel => {
             for (const { field, values } of extraQueries) {
-              if (!values.includes(channel[field])) {
+              const channelKey = field as keyof typeof channel
+              if (!values.includes(channel[channelKey])) {
                 return false
               }
             }
@@ -490,11 +497,11 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
    * 清空表中所有数据
    * @returns {Promise<void>}
    */
-  async clear () {
+  async clear (): Promise<void> {
     await this.ensureInitialized()
 
-    return new Promise((resolve, reject) => {
-      this.db.run(`DELETE FROM ${this.tableName}`, (err) => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.run(`DELETE FROM ${this.tableName}`, (err) => {
         if (err) {
           return reject(err)
         }
@@ -507,11 +514,11 @@ export class SQLiteChannelStorage extends ChaiteStorage<Channel> {
    * 关闭数据库连接
    * @returns {Promise<void>}
    */
-  async close () {
+  async close (): Promise<void> {
     if (!this.db) return Promise.resolve()
 
-    return new Promise((resolve, reject) => {
-      this.db.close(err => {
+    return new Promise<void>((resolve, reject) => {
+      this.db!.close(err => {
         if (err) {
           reject(err)
         } else {

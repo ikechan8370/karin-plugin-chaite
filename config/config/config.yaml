@@ -1,2 +1,108 @@
-# 网页截图测试地址
-screenshotUrl: https://baidu.com
+# chaite插件配置文件
+
+# 基本设置
+basic:
+  # 触发模式: 'at' 被@时触发, 'prefix' 前缀触发
+  toggleMode: at
+  # 前缀触发的命令前缀
+  togglePrefix: "#chat"
+  # 是否启用调试模式
+  debug: false
+  # 命令前缀
+  commandPrefix: "#chatgpt"
+
+# 随机触发配置
+bym:
+  # 是否启用随机触发
+  enable: false
+  # 触发关键词
+  hit:
+    - bym
+  # 触发概率 (0.02表示2%)
+  probability: 0.02
+  # 默认预设ID
+  defaultPreset: ""
+  # 预设前缀
+  presetPrefix: ""
+  # 预设映射配置
+  presetMap: []
+  # 最大令牌数 (0表示使用默认值)
+  maxTokens: 0
+  # 温度参数 (-1表示使用默认值)
+  temperature: -1
+  # 是否发送推理过程
+  sendReasoning: false
+
+# 大语言模型配置
+llm:
+  # 默认模型
+  defaultModel: ""
+  # 向量嵌入模型
+  embeddingModel: "gemini-embedding-exp-03-07"
+  # 向量维度
+  dimensions: 0
+  # 默认聊天预设ID
+  defaultChatPresetId: ""
+  # 是否允许自定义预设
+  enableCustomPreset: false
+  # 自定义预设用户白名单
+  customPresetUserWhiteList: []
+  # 自定义预设用户黑名单
+  customPresetUserBlackList: []
+  # 提示词屏蔽词列表
+  promptBlockWords: []
+  # 回复内容屏蔽词列表
+  responseBlockWords: []
+  # 屏蔽策略: 'full' 完全屏蔽, 'mask' 使用掩码替换
+  blockStrategy: full
+  # 屏蔽词掩码
+  blockWordMask: "***"
+  # 是否启用群聊上下文
+  enableGroupContext: false
+  # 群聊上下文长度
+  groupContextLength: 20
+  # 群聊上下文模板前缀
+  groupContextTemplatePrefix: |
+    <settings>
+    You are a member of a chat group, whose name is ${group.name}, and the group id is ${group.id}.
+    </settings>Latest several messages in the group chat:
+    ｜ 群名片 | 昵称 | qq号 | 群角色 | 群头衔 | 时间 | messageId | 消息内容 |
+    |---|---|---|---|---|---|---|---|
+  # 群聊上下文消息模板
+  groupContextTemplateMessage: "| ${message.sender.card} | ${message.sender.nickname} | ${message.sender.user_id} | ${message.sender.role} | ${message.sender.title} | ${message.time} | ${message.messageId} | ${message.raw_message} |"
+  # 群聊上下文模板后缀
+  groupContextTemplateSuffix: "\n"
+
+# 权限管理配置
+management:
+  # 黑名单群组ID
+  blackGroups: []
+  # 白名单群组ID
+  whiteGroups: []
+  # 黑名单用户ID
+  blackUsers: []
+  # 白名单用户ID
+  whiteUsers: []
+  # 默认速率限制
+  defaultRateLimit: 0
+
+# chaite服务配置
+chaite:
+  # 数据目录
+  dataDir: "data"
+  # 处理器目录路径
+  processorsDirPath: "utils/processors"
+  # 工具目录路径
+  toolsDirPath: "utils/tools"
+  # 云服务基础URL
+  cloudBaseUrl: "https://api.chaite.cloud"
+  # 云API密钥
+  cloudApiKey: ""
+  # 认证密钥
+  authKey: ""
+  # 服务器主机
+  host: "0.0.0.0"
+  # 服务器端口
+  port: 48370
+  # 存储类型: 'sqlite' 或 'lowdb'
+  storage: "sqlite"

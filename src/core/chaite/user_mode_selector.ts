@@ -1,4 +1,4 @@
-import { AbstractUserModeSelector } from 'chaite'
+import { AbstractUserModeSelector, ChatPreset, EventMessage } from 'chaite'
 
 export class ChatGPTUserModeSelector extends AbstractUserModeSelector {
   /**
@@ -6,7 +6,8 @@ export class ChatGPTUserModeSelector extends AbstractUserModeSelector {
    * @param e
    * @returns {Promise<import('chaite').ChatPreset>}
    */
-  getChatPreset (e) {
+  async getChatPreset (e: EventMessage): Promise<ChatPreset>  {
     // todo
+    return new ChatPreset()
   }
 }
