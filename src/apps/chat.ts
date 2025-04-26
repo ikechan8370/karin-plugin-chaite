@@ -8,7 +8,6 @@ import crypto from 'node:crypto'
 
 // 使用 empty 钩子来处理未匹配的命令
 export const chat = hooks.empty(async (e, next) => {
-  logger.info('进入聊天模式 - 使用 empty 钩子');
   if (!Chaite.getInstance()) {
     next(); // 如果 Chaite 实例不存在，继续后续处理
     return;
