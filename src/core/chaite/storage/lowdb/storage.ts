@@ -2,7 +2,7 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs';
-import { dataDir } from '../../../../utils/common.js';
+import { dataDir } from '../../../../utils/config';
 import { karinPathData } from 'node-karin';
 
 /**

@@ -30,7 +30,7 @@ import path from 'path';
 import fs from 'fs';
 import { migrateDatabase } from '@/utils/initDB';
 import { SQLiteChannelStorage } from './storage/sqlite/channel_storage';
-import { dataDir } from '@/utils/common';
+import { dataDir } from '@/utils/config';
 import { SQLiteChatPresetStorage } from './storage/sqlite/chat_preset_storage';
 import { SQLiteToolsStorage } from './storage/sqlite/tools_storage';
 import { SQLiteProcessorsStorage } from './storage/sqlite/processors_storage';

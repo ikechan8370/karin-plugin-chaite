@@ -1,5 +1,5 @@
 import path from 'path'
-import { dataDir } from '../../../../utils/common'
+import { dataDir } from '../../../../utils/config'
 import { SQLiteChannelStorage } from './channel_storage'
 import { LowDBChannelStorage } from '../lowdb/channel_storage'
 import { SQLiteChatPresetStorage } from './chat_preset_storage'

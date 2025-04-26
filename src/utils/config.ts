@@ -10,6 +10,7 @@ import {
   yaml,
   fs,
 } from 'node-karin'
+import path from 'path'
 
 const dir = `${karinPathBase}/${basename}`
 const dirConfig = `${dir}/config`
@@ -57,3 +58,5 @@ setTimeout(() => {
     logger.info('新数据:', now)
   }))
 }, 2000)
+
+export const dataDir = path.resolve('./@karinjs/data/karin-plugin-chaite', config().chaite.dataDir)
