@@ -8,6 +8,7 @@ import {
   copyConfigSync,
   requireFileSync,
   yaml,
+  fs,
 } from 'node-karin'
 
 const dir = `${karinPathBase}/${basename}`
@@ -15,6 +16,10 @@ const dirConfig = `${dir}/config`
 
 const defDir = `${dirPath}/config`
 const defConfig = `${defDir}/config`
+
+if (!fs.existsSync(dirConfig)) {
+  fs.mkdirSync(dirConfig)
+}
 
 /**
  * @description 初始化配置文件
