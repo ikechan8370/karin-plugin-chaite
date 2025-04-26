@@ -4,3 +4,4 @@ node_modules/
 data.db
 *.rdb
 data/
+lib/
