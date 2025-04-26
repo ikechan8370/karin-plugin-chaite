@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.0.3...v1.0.4) (2025-04-26)
+
+
+### Bug Fixes
+
+* add default config ([4d8b5b0](https://github.com/ikechan8370/karin-plugin-chaite/commit/4d8b5b031e151167bbded5b91463bae94fc0e0e5))
+* mkdir config ([dbc92be](https://github.com/ikechan8370/karin-plugin-chaite/commit/dbc92be4b3c0a35cff67d529738fb816bd86f279))
+
 ## [1.0.3](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.0.2...v1.0.3) (2025-04-26)
 
 
