@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.0.2...v1.0.3) (2025-04-26)
+
+
+### Bug Fixes
+
+* add install ([3b925aa](https://github.com/ikechan8370/karin-plugin-chaite/commit/3b925aac51814891e43fc26eb36f6c3a3a2630aa))
+
 ## [1.0.2](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.0.1...v1.0.2) (2025-04-26)
 
 
