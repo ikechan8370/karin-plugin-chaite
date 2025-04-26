@@ -49,6 +49,7 @@
   "files": [
     "/lib/**/*.js",
     "/lib/**/*.d.ts",
+    "/config/config/**",
     "/config/*.yaml",
     "resources",
     "LICENSE",
