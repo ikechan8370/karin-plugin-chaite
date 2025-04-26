@@ -61,7 +61,11 @@ export class VectraVectorDatabase implements VectorDatabase {
    */
   async search(queryVector: number[], k: number): Promise<Array<{ id: string; score: number; text: string }>> {
     const results = await this.index.queryItems(queryVector, k);
-    return results.map(r => ({ id: r.item.id, score: r.score, text: r.item.metadata.text }));
+    return results.map(r => ({ 
+      id: r.item.id, 
+      score: r.score, 
+      text: String(r.item.metadata.text) 
+    }));
   }
 
   /**
@@ -77,7 +81,7 @@ export class VectraVectorDatabase implements VectorDatabase {
       }
       return {
         vector: result.vector,
-        text: result.metadata.text
+        text: String(result.metadata.text)
       };
     } catch (error) {
       return null;
