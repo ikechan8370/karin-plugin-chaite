@@ -1,16 +1,16 @@
 {
-  "name": "karin-plugin-template-ts",
+  "name": "karin-plugin-chaite",
   "version": "1.0.1",
-  "author": "shijin",
+  "author": "ikechan8370",
   "type": "module",
-  "description": "karin plugin template",
-  "homepage": "https://github.com/KarinJS/karin-plugin-template-ts",
+  "description": "karin plugin chaite",
+  "homepage": "https://www.chaite.cloud",
   "bugs": {
-    "url": "https://github.com/KarinJS/karin-plugin-template-ts/issues"
+    "url": "https://github.com/ikechan8370/karin-plugin-chaite/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KarinJS/karin-plugin-template-ts.git"
+    "url": "git+https://github.com/ikechan8370/karin-plugin-chaite.git"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
