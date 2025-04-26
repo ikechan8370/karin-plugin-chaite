@@ -358,6 +358,7 @@ export class LowDBCollection<T extends object = Record<string, any>> {
 
 const storageLocation = path.resolve(dataDir, 'storage.json');
 if (!fs.existsSync(storageLocation)) {
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(storageLocation, JSON.stringify({ collections: {} }));
 }
 
