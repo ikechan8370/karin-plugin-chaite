@@ -15,6 +15,7 @@ import { logger } from 'node-karin'
 import fs from 'fs'
 import path from 'path'
 import { md5 } from './common.js'
+import { dirPath } from './dir.js'
 
 /**
  * 默认系统用户
@@ -56,20 +57,20 @@ async function addEmbeddedProcessor (
  */
 export async function migrateDatabase (): Promise<void> {
   logger.debug('检查数据库初始化...')
-  const resourcesDir = path.resolve('./plugins/chatgpt-plugin', 'resources/embedded')
+  const resourcesDir = path.resolve(dirPath, 'resources/embedded')
 
   // 1. 设置初始化的预处理器
-  const processorsManager = Chaite.getInstance().getProcessorsManager()
+  // const processorsManager = Chaite.getInstance().getProcessorsManager()
 
-  if (!await processorsManager.getInstance('BlackPostProcessor')) {
-    logger.info('初始化内置的屏蔽词前置处理器')
-    await addEmbeddedProcessor(resourcesDir, processorsManager, 'pre', 'BlackPostProcessor', '内置的屏蔽词前置处理器')
-  }
+  // if (!await processorsManager.getInstance('BlackPostProcessor')) {
+  //   logger.info('初始化内置的屏蔽词前置处理器')
+  //   await addEmbeddedProcessor(resourcesDir, processorsManager, 'pre', 'BlackPostProcessor', '内置的屏蔽词前置处理器')
+  // }
 
-  if (!await processorsManager.getInstance('BlackPreProcessor')) {
-    logger.info('初始化内置的屏蔽词后置处理器')
-    await addEmbeddedProcessor(resourcesDir, processorsManager, 'post', 'BlackPreProcessor', '内置的屏蔽词前置处理器')
-  }
+  // if (!await processorsManager.getInstance('BlackPreProcessor')) {
+  //   logger.info('初始化内置的屏蔽词后置处理器')
+  //   await addEmbeddedProcessor(resourcesDir, processorsManager, 'post', 'BlackPreProcessor', '内置的屏蔽词前置处理器')
+  // }
 
   // 2. 设置默认渠道
   const channelsManager = Chaite.getInstance().getChannelsManager()

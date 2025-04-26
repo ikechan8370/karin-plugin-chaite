@@ -1,22 +1,23 @@
-import { GroupSender, karin, Message, segment } from 'node-karin'
+import { karin, logger, hooks } from 'node-karin'
 import { config } from '../utils/config'
 import { Chaite, SendMessageOption, EventMessage } from 'chaite'
 import { getPreset, intoUserMessage, toYunzai } from '../utils/message'
 import { YunzaiUserState } from '../core/chaite/storage/lowdb/user_state_storage'
-import { getGroupContextPrompt, getGroupHistory } from '../utils/group'
+import { getGroupContextPrompt } from '../utils/group'
 import crypto from 'node:crypto'
 
-
-// 注册聊天命令
-export const chat = karin.command(/^[^#][sS]_/, async (e: Message, next: () => void) => {
+// 使用 empty 钩子来处理未匹配的命令
+export const chat = hooks.empty(async (e, next) => {
+  logger.info('进入聊天模式 - 使用 empty 钩子');
   if (!Chaite.getInstance()) {
-    return false;
+    next(); // 如果 Chaite 实例不存在，继续后续处理
+    return;
   }
 
   // 获取用户状态
   let state = await Chaite.getInstance().getUserStateStorage().getItem(e.sender.uin + '');
   if (!state) {
-    state = new YunzaiUserState(e.sender.uin + '', e.sender.name, (e.sender as GroupSender).card || '');
+    state = new YunzaiUserState(e.sender.uin + '', e.sender.name, (e.sender as any).card || '');
   }
 
   // 初始化会话 ID 和消息 ID
@@ -30,10 +31,11 @@ export const chat = karin.command(/^[^#][sS]_/, async (e: Message, next: () => v
   // 获取预设
   const preset = await getPreset(e, state?.settings.preset || config().llm.defaultChatPresetId, config().basic.toggleMode, config().basic.togglePrefix);
   if (!preset) {
-    console.debug('不满足对话触发条件或未找到预设，不进入对话');
-    return false;
+    logger.debug('不满足对话触发条件或未找到预设，不进入对话');
+    next(); // 不满足条件，继续后续处理
+    return;
   } else {
-    console.info('进入对话, prompt: ' + e.msg);
+    logger.info('进入对话, prompt: ' + e.msg);
   }
 
   // 设置发送消息选项
@@ -102,5 +104,7 @@ export const chat = karin.command(/^[^#][sS]_/, async (e: Message, next: () => v
     await e.reply(forwardElement);
   }
 
-  next(); // 继续匹配其他插件
+  // 不调用 next()，因为已经处理了消息，不需要后续钩子再处理
+  // 如果需要其他钩子继续处理，可以调用 next()
+  next();
 });

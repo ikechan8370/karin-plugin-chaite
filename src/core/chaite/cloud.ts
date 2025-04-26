@@ -16,7 +16,7 @@ import {
   ToolsGroupDTO,
   HistoryManager,
   ProcessorDTO} from 'chaite';
-import { logger } from 'node-karin';
+import { karinPathBase, karinPathData, logger } from 'node-karin';
 import { config } from '../../utils/config';
 import { LowDBChannelStorage } from './storage/lowdb/channel_storage';
 import { LowDBChatPresetsStorage } from './storage/lowdb/chat_preset_storage';
@@ -39,6 +39,7 @@ import { SQLiteToolsGroupStorage } from './storage/sqlite/tool_groups_storage';
 import { checkMigrate } from './storage/sqlite/migrate';
 import { SQLiteHistoryManager } from './storage/sqlite/history_manager';
 import { ChatGPTConfig } from '@/types/config';
+import { basename, dirPath } from '@/utils/dir';
 
 /**
  * 认证，以便共享上传
@@ -128,7 +129,7 @@ export async function initRagManager(model: string, dimensions: number): Promise
     }
   }();
 
-  const vectorDBPath = path.resolve('./plugins/chatgpt-plugin', config().chaite.dataDir, 'vector_index');
+  const vectorDBPath = path.resolve(karinPathData, config().chaite.dataDir, 'vector_index');
   if (!fs.existsSync(vectorDBPath)) {
     fs.mkdirSync(vectorDBPath, { recursive: true });
   }
@@ -151,10 +152,10 @@ export async function initChaite(): Promise<void> {
   let userStateStorage: ChaiteStorage<UserState>;
   let historyStorage: HistoryManager;
   let toolsGroupStorage: ChaiteStorage<ToolsGroupDTO>;
-
+  const dir = `${karinPathBase}/${basename}`
   switch (storage) {
     case 'sqlite': {
-      const dbPath = path.join(dataDir, 'data.db');
+      const dbPath = path.join(dirPath, 'data.db');
       channelsStorage = new SQLiteChannelStorage(dbPath);
       await (channelsStorage as SQLiteChannelStorage).initialize();
       chatPresetsStorage = new SQLiteChatPresetStorage(dbPath);
@@ -191,12 +192,12 @@ export async function initChaite(): Promise<void> {
   }
 
   const channelsManager = await ChannelsManager.init(channelsStorage, new DefaultChannelLoadBalancer());
-  const toolsDir = path.resolve('./plugins/chatgpt-plugin', config().chaite.toolsDirPath);
+  const toolsDir = path.resolve(dir, 'src', config().chaite.toolsDirPath);
   if (!fs.existsSync(toolsDir)) {
     fs.mkdirSync(toolsDir, { recursive: true });
   }
   const toolsManager = await ToolManager.init(toolsDir, toolsStorage);
-  const processorsDir = path.resolve('./plugins/chatgpt-plugin', config().chaite.processorsDirPath);
+  const processorsDir = path.resolve(dir, 'src', config().chaite.processorsDirPath);
   if (!fs.existsSync(processorsDir)) {
     fs.mkdirSync(processorsDir, { recursive: true });
   }
@@ -228,33 +229,37 @@ export async function initChaite(): Promise<void> {
     }
   }
   await initRagManager(config().llm.embeddingModel, config().llm.dimensions);
-  if (!config().chaite.authKey) {
-    config().chaite.authKey = Chaite.getInstance().getFrontendAuthHandler().generateToken(0, true);
+  let currentConfig = config();
+  if (!currentConfig.chaite.authKey) {
+    currentConfig.chaite.authKey = Chaite.getInstance().getFrontendAuthHandler().generateToken(0, true);
   }
-  chaite.getGlobalConfig()?.setAuthKey(config().chaite.authKey);
+  chaite.getGlobalConfig()?.setAuthKey(currentConfig.chaite.authKey);
+  currentConfig.save();
   // 监听Chaite配置变化，同步需要同步的配置
   chaite.on('config-change', obj => {
     const { key, newVal, oldVal } = obj;
     if (key === 'authKey') {
-      // 假设 ChatGPTConfig.serverAuthKey 是字符串类型
-      config().chaite.authKey = newVal;
+      let cfg = config()
+      cfg.chaite.authKey = newVal;
+      cfg.save();
     }
     logger.debug(`Chaite config changed: ${key} from ${oldVal} to ${newVal}`);
   });
   // 监听通过chaite对插件配置修改
   chaite.setUpdateConfigCallback(async customConfig => {
     logger.debug('chatgpt-plugin config updated');
+    let cfg = config()
     Object.keys(customConfig).forEach(key => {
-      if (typeof customConfig[key as keyof typeof customConfig] === 'object' && customConfig[key] !== null && (config() as any)[key]) {
-        deepMerge(config()[key as keyof ChatGPTConfig] as Record<string, any>, customConfig[key] as Record<string, any>);
+      if (typeof customConfig[key as keyof typeof customConfig] === 'object' && customConfig[key] !== null && (cfg as any)[key]) {
+        deepMerge(cfg[key as keyof ChatGPTConfig] as Record<string, any>, customConfig[key] as Record<string, any>);
       } else {
-        (config() as any)[key] = customConfig[key];
+        (cfg as any)[key] = customConfig[key];
       }
     });
     // 回传部分需要同步的配置
-    chaite.getGlobalConfig()?.setDebug(config().basic.debug);
-    chaite.getGlobalConfig()?.setAuthKey(config().chaite.authKey);
-    config().save();
+    chaite.getGlobalConfig()?.setDebug(cfg.basic.debug);
+    chaite.getGlobalConfig()?.setAuthKey(cfg.chaite.authKey);
+    cfg.save();
     return customConfig;
   });
   // 授予Chaite获取插件配置的能力以便通过api放出
