@@ -55,6 +55,7 @@ interface ChaiteConfig {
     dataDir: string
     processorsDirPath: string
     toolsDirPath: string
+    triggersDirPath: string
     cloudBaseUrl: string
     cloudApiKey: string
     authKey: string

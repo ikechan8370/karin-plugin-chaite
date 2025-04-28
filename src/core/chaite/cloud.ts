@@ -15,7 +15,9 @@ import {
   UserState,
   ToolsGroupDTO,
   HistoryManager,
-  ProcessorDTO} from 'chaite';
+  TriggerDTO,
+  ProcessorDTO,
+  TriggerManager} from 'chaite';
 import { karinPathBase, karinPathData, logger } from 'node-karin';
 import { config } from '../../utils/config';
 import { LowDBChannelStorage } from './storage/lowdb/channel_storage';
@@ -40,6 +42,8 @@ import { checkMigrate } from './storage/sqlite/migrate';
 import { SQLiteHistoryManager } from './storage/sqlite/history_manager';
 import { ChatGPTConfig } from '@/types/config';
 import { basename, dirPath } from '@/utils/dir';
+import { SQLiteTriggerStorage } from './storage/sqlite/trigger_storage';
+import LowDBTriggerStorage from './storage/lowdb/trigger_storage';
 
 /**
  * 认证，以便共享上传
@@ -152,6 +156,7 @@ export async function initChaite(): Promise<void> {
   let userStateStorage: ChaiteStorage<UserState>;
   let historyStorage: HistoryManager;
   let toolsGroupStorage: ChaiteStorage<ToolsGroupDTO>;
+  let triggerStorage: ChaiteStorage<TriggerDTO>;
   const dir = `${karinPathBase}/${basename}`
   switch (storage) {
     case 'sqlite': {
@@ -168,6 +173,8 @@ export async function initChaite(): Promise<void> {
       await (userStateStorage as SQLiteUserStateStorage).initialize();
       toolsGroupStorage = new SQLiteToolsGroupStorage(dbPath);
       await (toolsGroupStorage as SQLiteToolsGroupStorage).initialize();
+      triggerStorage = new SQLiteTriggerStorage(dbPath);
+      await (triggerStorage as SQLiteTriggerStorage).initialize();
       historyStorage = new SQLiteHistoryManager(dbPath, path.join(dataDir, 'images'));
       await checkMigrate();
       break;
@@ -180,6 +187,7 @@ export async function initChaite(): Promise<void> {
       toolsStorage = new LowDBToolsStorage(ChatGPTStorage);
       processorsStorage = new LowDBProcessorsStorage(ChatGPTStorage);
       userStateStorage = new LowDBUserStateStorage(ChatGPTStorage);
+      triggerStorage = new LowDBTriggerStorage(ChatGPTStorage);
       const ChatGPTHistoryStorage = (await import('./storage/lowdb/storage')).ChatGPTHistoryStorage;
       await ChatGPTHistoryStorage.init();
       historyStorage = new LowDBHistoryManager(ChatGPTHistoryStorage);
@@ -204,6 +212,12 @@ export async function initChaite(): Promise<void> {
   const processorsManager = await ProcessorsManager.init(processorsDir, processorsStorage);
   const chatPresetManager = await ChatPresetManager.init(chatPresetsStorage);
   const toolsGroupManager = await ToolsGroupManager.init(toolsGroupStorage);
+  const triggersDir = path.resolve(dir, 'src', config().chaite.toolsDirPath);
+  if (!fs.existsSync(triggersDir)) {
+    fs.mkdirSync(triggersDir, { recursive: true });
+  }
+  const triggerManager = new TriggerManager(triggersDir, triggerStorage);
+  await triggerManager.initialize()
   const userModeSelector = new ChatGPTUserModeSelector();
   const chaite = Chaite.init(
     channelsManager,
@@ -211,6 +225,7 @@ export async function initChaite(): Promise<void> {
     processorsManager,
     chatPresetManager,
     toolsGroupManager,
+    triggerManager,
     userModeSelector,
     userStateStorage,
     historyStorage,
