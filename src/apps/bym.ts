@@ -7,7 +7,6 @@ import { formatTimeToBeiJing } from '../utils/common.js'
 
 // 使用 empty 钩子来处理未匹配的命令（伪人模式）
 export const bym = hooks.empty(async (e, next) => {
-  logger.debug('进入伪人模式 - 使用 empty 钩子');
   if (!Chaite.getInstance()) {
     next(); // 如果 Chaite 实例不存在，继续后续处理
     return;

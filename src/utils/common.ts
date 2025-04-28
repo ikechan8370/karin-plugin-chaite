@@ -2,7 +2,6 @@ import lodash from 'node-karin/lodash'
 import moment from 'node-karin/moment'
 import crypto from 'crypto'
 import path from 'path'
-import { config } from './config'
 /**
  * 生成随机数
  * @param min - 最小值
@@ -30,8 +29,6 @@ export function md5 (str: string): string {
 export function generateId (): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 15)
 }
-
-export const dataDir = path.resolve('./@karinjs/data/karin-plugin-chaite', config().chaite.dataDir)
 
 /**
  * Converts a timestamp to Beijing time (UTC+8)
