@@ -17,8 +17,8 @@ export class KarinGroupContextCollector extends GroupContextCollector {
      * @param {number} length
      * @returns {Promise<Array<MessageResponse>>}
      */
-    async collect(e: GroupMessage, groupId: string, start = '', length = 20): Promise<Array<MessageResponse>> {
-        let latestChats = await e.bot.getHistoryMsg(e.contact, start, length)
+    async collect(e: GroupMessage, groupId: string, start: string = '', length: number = 20): Promise<Array<MessageResponse>> {
+        let latestChats = await e.bot.getHistoryMsg(e.contact, start, 1)
         if (latestChats.length > 0) {
             let latestChat = latestChats[0]
             if (latestChat) {
@@ -74,7 +74,7 @@ export async function getGroupHistory(e: GroupMessage, length = 20): Promise<Arr
  * @param {number} length 长度
  * @returns {Promise<string>}
  */
-export async function getGroupContextPrompt(e: GroupMessage, length: number) {
+export async function getGroupContextPrompt(e: GroupMessage, length: number): Promise<string> {
     const {
         groupContextTemplatePrefix = '',
         groupContextTemplateMessage = '',
