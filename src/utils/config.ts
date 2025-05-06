@@ -9,6 +9,7 @@ import {
   requireFileSync,
   yaml,
   fs,
+  karinPathData,
 } from 'node-karin'
 import path from 'path'
 
@@ -59,4 +60,4 @@ setTimeout(() => {
   }))
 }, 2000)
 
-export const dataDir = path.resolve('./@karinjs/data/karin-plugin-chaite', config().chaite.dataDir)
+export const dataDir = path.resolve(karinPathData, config().chaite.dataDir)
