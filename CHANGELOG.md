@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.4](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.3...v1.1.4) (2025-05-07)
+
+
+### Bug Fixes
+
+* 1.8.x ([ac5fe22](https://github.com/ikechan8370/karin-plugin-chaite/commit/ac5fe221cfd1c90a1d6f7cb2665adff9eb56fcee))
+* 转发消息、格式调整 ([64a7ac5](https://github.com/ikechan8370/karin-plugin-chaite/commit/64a7ac515de62959c140e2d24a8b65c76f184e5a))
+
 ## [1.1.3](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.2...v1.1.3) (2025-05-07)
 
 
