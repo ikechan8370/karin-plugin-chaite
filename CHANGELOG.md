@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.4...v1.1.5) (2025-05-07)
+
+
+### Bug Fixes
+
+* trigger path ([4994e20](https://github.com/ikechan8370/karin-plugin-chaite/commit/4994e20ffa3c9219675d3f60eea5ee02a57a220c))
+
 ## [1.1.4](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.3...v1.1.4) (2025-05-07)
 
 
