@@ -13,6 +13,7 @@
     "url": "git+https://github.com/ikechan8370/karin-plugin-chaite.git"
   },
   "scripts": {
+    "app": "node --import tsx src/app.ts",
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
     "pub": "npm publish --access public",
     "dev": "cross-env EBV_FILE=\"development.env\" node --import tsx src/app.ts",
