@@ -160,7 +160,7 @@ export async function initChaite(): Promise<void> {
   const dir = `${karinPathBase}/${basename}`
   switch (storage) {
     case 'sqlite': {
-      const dbPath = path.join(dirPath, 'data.db');
+      const dbPath = path.join(`${karinPathBase}/${basename}/data`, 'data.db');
       channelsStorage = new SQLiteChannelStorage(dbPath);
       await (channelsStorage as SQLiteChannelStorage).initialize();
       chatPresetsStorage = new SQLiteChatPresetStorage(dbPath);
