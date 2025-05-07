@@ -34,7 +34,7 @@ copyConfigSync(defConfig, dirConfig, ['.yaml'])
 export const config = () => {
   const cfg = requireFileSync(`${dirConfig}/config.yaml`)
   const def = requireFileSync(`${defConfig}/config.yaml`)
-  const data =  { ...def, ...cfg } as ChatGPTConfig
+  const data = { ...def, ...cfg } as ChatGPTConfig
   return Object.assign({}, data, {
     save: () => {
       yaml.save(`${dirConfig}/config.yaml`, data)

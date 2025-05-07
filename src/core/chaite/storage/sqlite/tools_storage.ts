@@ -1,51 +1,51 @@
-import { ChaiteStorage, ToolDTO } from 'chaite';
-import sqlite3 from 'sqlite3';
-import { Database } from 'sqlite3';
-import path from 'path';
-import fs from 'fs';
-import { generateId } from '../../../../utils/common.js';
+import { ChaiteStorage, ToolDTO } from 'chaite'
+import sqlite3 from 'sqlite3'
+import { Database } from 'sqlite3'
+import path from 'path'
+import fs from 'fs'
+import { generateId } from '../../../../utils/common.js'
 
 /**
  * SQLiteToolsStorage extends ChaiteStorage for ToolDTO.
  * @extends {ChaiteStorage<ToolDTO>}
  */
 export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
-  private dbPath: string;
-  private db: Database | null;
-  private initialized: boolean;
-  private tableName: string;
+  private dbPath: string
+  private db: Database | null
+  private initialized: boolean
+  private tableName: string
 
-  getName(): string {
-    return 'SQLiteToolsStorage';
+  getName (): string {
+    return 'SQLiteToolsStorage'
   }
 
   /**
    * Constructor for SQLiteToolsStorage.
    * @param {string} dbPath - Path to the database file.
    */
-  constructor(dbPath: string) {
-    super();
-    this.dbPath = dbPath;
-    this.db = null;
-    this.initialized = false;
-    this.tableName = 'tools';
+  constructor (dbPath: string) {
+    super()
+    this.dbPath = dbPath
+    this.db = null
+    this.initialized = false
+    this.tableName = 'tools'
   }
 
   /**
    * Initialize the database connection and table structure.
    * @returns {Promise<void>}
    */
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
+  async initialize (): Promise<void> {
+    if (this.initialized) return
     return new Promise<void>((resolve, reject) => {
       // Ensure directory exists
-      const dir = path.dirname(this.dbPath);
+      const dir = path.dirname(this.dbPath)
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true })
       }
       this.db = new sqlite3.Database(this.dbPath, async (err: Error | null) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
         // Create tools table with main attributes as columns
         this.db!.run(
@@ -67,52 +67,52 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
           )`,
           (err: Error | null) => {
             if (err) {
-              reject(err);
+              reject(err)
             } else {
               // Create indexes to improve query performance
               this.db!.run(
                 `CREATE INDEX IF NOT EXISTS idx_tools_name ON ${this.tableName} (name)`,
                 (err: Error | null) => {
                   if (err) {
-                    reject(err);
+                    reject(err)
                   } else {
                     this.db!.run(
                       `CREATE INDEX IF NOT EXISTS idx_tools_status ON ${this.tableName} (status)`,
                       (err: Error | null) => {
                         if (err) {
-                          reject(err);
+                          reject(err)
                         } else {
                           this.db!.run(
                             `CREATE INDEX IF NOT EXISTS idx_tools_permission ON ${this.tableName} (permission)`,
                             (err: Error | null) => {
                               if (err) {
-                                reject(err);
+                                reject(err)
                               } else {
-                                this.initialized = true;
-                                resolve();
+                                this.initialized = true
+                                resolve()
                               }
                             }
-                          );
+                          )
                         }
                       }
-                    );
+                    )
                   }
                 }
-              );
+              )
             }
           }
-        );
-      });
-    });
+        )
+      })
+    })
   }
 
   /**
    * Ensure the database is initialized.
    * @returns {Promise<void>}
    */
-  async ensureInitialized(): Promise<void> {
+  async ensureInitialized (): Promise<void> {
     if (!this.initialized) {
-      await this.initialize();
+      await this.initialize()
     }
   }
 
@@ -121,7 +121,7 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {ToolDTO} tool - The tool DTO.
    * @returns {Object} Database record.
    */
-  private _toolToRecord(tool: ToolDTO): Record<string, any> {
+  private _toolToRecord (tool: ToolDTO): Record<string, any> {
     // Extract main fields, put the rest into extraData
     const {
       id,
@@ -138,9 +138,9 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
       status,
       permission,
       ...rest
-    } = tool;
+    } = tool
     // Serialize uploader object
-    const uploaderStr = uploader ? JSON.stringify(uploader) : null;
+    const uploaderStr = uploader ? JSON.stringify(uploader) : null
     return {
       id: id || '',
       name: name || '',
@@ -156,7 +156,7 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
       status: status || 'enabled',
       permission: permission || 'public',
       extraData: Object.keys(rest).length > 0 ? JSON.stringify(rest) : null,
-    };
+    }
   }
 
   /**
@@ -164,23 +164,23 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {Object} record - Database record.
    * @returns {ToolDTO | null} ToolDTO object.
    */
-  private _recordToTool(record: Record<string, any> | undefined): ToolDTO | null {
+  private _recordToTool (record: Record<string, any> | undefined): ToolDTO | null {
     // Return null if record does not exist
-    if (!record) return null;
+    if (!record) return null
     // Parse uploader
-    let uploader: any = null;
+    let uploader: any = null
     try {
       if (record.uploader) {
-        uploader = JSON.parse(record.uploader);
+        uploader = JSON.parse(record.uploader)
       }
     } catch (e) {
       // Parsing error, use null
     }
     // Parse extra data
-    let extraData: Record<string, any> = {};
+    let extraData: Record<string, any> = {}
     try {
       if (record.extraData) {
-        extraData = JSON.parse(record.extraData);
+        extraData = JSON.parse(record.extraData)
       }
     } catch (e) {
       // Parsing error, use empty object
@@ -201,8 +201,8 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
       status: record.status,
       permission: record.permission,
       ...extraData,
-    };
-    return new ToolDTO(toolData);
+    }
+    return new ToolDTO(toolData)
   }
 
   /**
@@ -210,17 +210,17 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {string} key - Tool ID.
    * @returns {Promise<ToolDTO | null>}
    */
-  async getItem(key: string): Promise<ToolDTO | null> {
-    await this.ensureInitialized();
+  async getItem (key: string): Promise<ToolDTO | null> {
+    await this.ensureInitialized()
     return new Promise<ToolDTO | null>((resolve, reject) => {
       this.db!.get(`SELECT * FROM ${this.tableName} WHERE id = ?`, [key], (err: Error | null, row: any) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        const tool = this._recordToTool(row);
-        resolve(tool);
-      });
-    });
+        const tool = this._recordToTool(row)
+        resolve(tool)
+      })
+    })
   }
 
   /**
@@ -229,25 +229,25 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {ToolDTO} tool - Tool object.
    * @returns {Promise<string>}
    */
-  async setItem(id: string, tool: ToolDTO): Promise<string> {
-    await this.ensureInitialized();
+  async setItem (id: string, tool: ToolDTO): Promise<string> {
+    await this.ensureInitialized()
     if (!id) {
-      id = generateId();
+      id = generateId()
     }
     // Add timestamps
     if (!tool.createdAt) {
-      tool.createdAt = new Date().toISOString();
+      tool.createdAt = new Date().toISOString()
     }
-    tool.updatedAt = new Date().toISOString();
+    tool.updatedAt = new Date().toISOString()
     // Convert to database record
-    const record = this._toolToRecord(tool);
-    record.id = id; // Ensure ID is the specified ID
+    const record = this._toolToRecord(tool)
+    record.id = id // Ensure ID is the specified ID
     // Build insert or update SQL
-    const fields = Object.keys(record);
-    const placeholders = fields.map(() => '?').join(', ');
-    const updates = fields.map((field) => `${field} = ?`).join(', ');
-    const values = fields.map((field) => record[field]);
-    const duplicateValues = [...values]; // Used for ON CONFLICT update
+    const fields = Object.keys(record)
+    const placeholders = fields.map(() => '?').join(', ')
+    const updates = fields.map((field) => `${field} = ?`).join(', ')
+    const values = fields.map((field) => record[field])
+    const duplicateValues = [...values] // Used for ON CONFLICT update
     return new Promise<string>((resolve, reject) => {
       this.db!.run(
         `INSERT INTO ${this.tableName} (${fields.join(', ')}) 
@@ -256,12 +256,12 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
         [...values, ...duplicateValues],
         function (err: Error | null) {
           if (err) {
-            return reject(err);
+            return reject(err)
           }
-          resolve(id);
+          resolve(id)
         }
-      );
-    });
+      )
+    })
   }
 
   /**
@@ -269,33 +269,33 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {string} key - Tool ID.
    * @returns {Promise<void>}
    */
-  async removeItem(key: string): Promise<void> {
-    await this.ensureInitialized();
+  async removeItem (key: string): Promise<void> {
+    await this.ensureInitialized()
     return new Promise<void>((resolve, reject) => {
       this.db!.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [key], (err: Error | null) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        resolve();
-      });
-    });
+        resolve()
+      })
+    })
   }
 
   /**
    * List all tools.
    * @returns {Promise<ToolDTO[]>}
    */
-  async listItems(): Promise<ToolDTO[]> {
-    await this.ensureInitialized();
+  async listItems (): Promise<ToolDTO[]> {
+    await this.ensureInitialized()
     return new Promise<ToolDTO[]>((resolve, reject) => {
       this.db!.all(`SELECT * FROM ${this.tableName}`, (err: Error | null, rows: any[]) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        const tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[];
-        resolve(tools);
-      });
-    });
+        const tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[]
+        resolve(tools)
+      })
+    })
   }
 
   /**
@@ -303,57 +303,57 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {Record<string, unknown>} filter - Filter conditions.
    * @returns {Promise<ToolDTO[]>}
    */
-  async listItemsByEqFilter(filter: Record<string, unknown>): Promise<ToolDTO[]> {
-    await this.ensureInitialized();
+  async listItemsByEqFilter (filter: Record<string, unknown>): Promise<ToolDTO[]> {
+    await this.ensureInitialized()
     // Return all if no filter
     if (!filter || Object.keys(filter).length === 0) {
-      return this.listItems();
+      return this.listItems()
     }
     // Use SQL fields for direct filtering
-    const directFields = ['id', 'name', 'description', 'modelType', 'cloudId', 'status', 'permission'];
-    const sqlFilters: string[] = [];
-    const sqlParams: unknown[] = [];
-    const extraFilters: Record<string, unknown> = {};
-    let hasExtraFilters = false;
+    const directFields = ['id', 'name', 'description', 'modelType', 'cloudId', 'status', 'permission']
+    const sqlFilters: string[] = []
+    const sqlParams: unknown[] = []
+    const extraFilters: Record<string, unknown> = {}
+    let hasExtraFilters = false
     // Differentiate between database fields and extra fields
     for (const key in filter) {
-      const value = filter[key];
+      const value = filter[key]
       if (directFields.includes(key)) {
-        sqlFilters.push(`${key} = ?`);
-        sqlParams.push(value);
+        sqlFilters.push(`${key} = ?`)
+        sqlParams.push(value)
       } else if (key === 'embedded') {
-        sqlFilters.push('embedded = ?');
-        sqlParams.push(value ? 1 : 0);
+        sqlFilters.push('embedded = ?')
+        sqlParams.push(value ? 1 : 0)
       } else {
-        extraFilters[key] = value;
-        hasExtraFilters = true;
+        extraFilters[key] = value
+        hasExtraFilters = true
       }
     }
     // Build SQL query
-    let sql = `SELECT * FROM ${this.tableName}`;
+    let sql = `SELECT * FROM ${this.tableName}`
     if (sqlFilters.length > 0) {
-      sql += ` WHERE ${sqlFilters.join(' AND ')}`;
+      sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
     return new Promise<ToolDTO[]>((resolve, reject) => {
       this.db!.all(sql, sqlParams, (err: Error | null, rows: any[]) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        let tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[];
+        let tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[]
         // If there are extra fields to filter in memory
         if (hasExtraFilters) {
           tools = tools.filter((tool) => {
             for (const key in extraFilters) {
               if (tool[key as keyof ToolDTO] !== extraFilters[key]) {
-                return false;
+                return false
               }
             }
-            return true;
-          });
+            return true
+          })
         }
-        resolve(tools);
-      });
-    });
+        resolve(tools)
+      })
+    })
   }
 
   /**
@@ -361,92 +361,92 @@ export class SQLiteToolsStorage extends ChaiteStorage<ToolDTO> {
    * @param {Array<{ field: string; values: unknown[] }>} query - Query conditions.
    * @returns {Promise<ToolDTO[]>}
    */
-  async listItemsByInQuery(query: Array<{ field: string; values: unknown[] }>): Promise<ToolDTO[]> {
-    await this.ensureInitialized();
+  async listItemsByInQuery (query: Array<{ field: string; values: unknown[] }>): Promise<ToolDTO[]> {
+    await this.ensureInitialized()
     // Return all if no query
     if (!query || query.length === 0) {
-      return this.listItems();
+      return this.listItems()
     }
     // Use SQL IN clause for optimization
-    const directFields = ['id', 'name', 'description', 'modelType', 'cloudId', 'status', 'permission'];
-    const sqlFilters: string[] = [];
-    const sqlParams: unknown[] = [];
-    const extraQueries: Array<{ field: string; values: unknown[] }> = [];
+    const directFields = ['id', 'name', 'description', 'modelType', 'cloudId', 'status', 'permission']
+    const sqlFilters: string[] = []
+    const sqlParams: unknown[] = []
+    const extraQueries: Array<{ field: string; values: unknown[] }> = []
     // Process each query condition
     for (const { field, values } of query) {
-      if (values.length === 0) continue;
+      if (values.length === 0) continue
       if (directFields.includes(field)) {
-        const placeholders = values.map(() => '?').join(', ');
-        sqlFilters.push(`${field} IN (${placeholders})`);
-        sqlParams.push(...values);
+        const placeholders = values.map(() => '?').join(', ')
+        sqlFilters.push(`${field} IN (${placeholders})`)
+        sqlParams.push(...values)
       } else if (field === 'embedded') {
-        const boolValues = values.map((v) => (v ? 1 : 0));
-        const placeholders = boolValues.map(() => '?').join(', ');
-        sqlFilters.push(`embedded IN (${placeholders})`);
-        sqlParams.push(...boolValues);
+        const boolValues = values.map((v) => (v ? 1 : 0))
+        const placeholders = boolValues.map(() => '?').join(', ')
+        sqlFilters.push(`embedded IN (${placeholders})`)
+        sqlParams.push(...boolValues)
       } else {
-        extraQueries.push({ field, values });
+        extraQueries.push({ field, values })
       }
     }
     // Build SQL query
-    let sql = `SELECT * FROM ${this.tableName}`;
+    let sql = `SELECT * FROM ${this.tableName}`
     if (sqlFilters.length > 0) {
-      sql += ` WHERE ${sqlFilters.join(' AND ')}`;
+      sql += ` WHERE ${sqlFilters.join(' AND ')}`
     }
     return new Promise<ToolDTO[]>((resolve, reject) => {
       this.db!.all(sql, sqlParams, (err: Error | null, rows: any[]) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        let tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[];
+        let tools = rows.map((row) => this._recordToTool(row)).filter(Boolean) as ToolDTO[]
         // If there are conditions to filter in memory
         if (extraQueries.length > 0) {
           tools = tools.filter((tool) => {
             for (const { field, values } of extraQueries) {
               if (!values.includes(tool[field as keyof ToolDTO])) {
-                return false;
+                return false
               }
             }
-            return true;
-          });
+            return true
+          })
         }
-        resolve(tools);
-      });
-    });
+        resolve(tools)
+      })
+    })
   }
 
   /**
    * Clear all data in the table.
    * @returns {Promise<void>}
    */
-  async clear(): Promise<void> {
-    await this.ensureInitialized();
+  async clear (): Promise<void> {
+    await this.ensureInitialized()
     return new Promise<void>((resolve, reject) => {
       this.db!.run(`DELETE FROM ${this.tableName}`, (err: Error | null) => {
         if (err) {
-          return reject(err);
+          return reject(err)
         }
-        resolve();
-      });
-    });
+        resolve()
+      })
+    })
   }
 
   /**
    * Close the database connection.
    * @returns {Promise<void>}
    */
-  async close(): Promise<void> {
-    if (!this.db) return Promise.resolve();
+  async close (): Promise<void> {
+    if (!this.db) return Promise.resolve()
     return new Promise<void>((resolve, reject) => {
       this.db!.close((err: Error | null) => {
         if (err) {
-          reject(err);
+          reject(err)
         } else {
-          this.initialized = false;
-          this.db = null;
-          resolve();
+          this.initialized = false
+          this.db = null
+          resolve()
         }
-      });
-    });
+      })
+    })
   }
 }

@@ -13,7 +13,6 @@ import { LowDBUserStateStorage } from '../lowdb/user_state_storage'
 import fs from 'fs'
 import { logger } from 'node-karin'
 import { ChaiteStorage, UserState } from 'chaite'
-import { LowDBCollection } from '../lowdb/storage.js'
 
 export async function checkMigrate () {
   logger.debug('检查是否需要从 LowDB 迁移数据到 SQLite...')

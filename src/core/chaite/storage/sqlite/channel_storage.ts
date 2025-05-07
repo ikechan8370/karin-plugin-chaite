@@ -1,4 +1,4 @@
-import { BaseClientOptions, ChaiteStorage, Channel, ChannelStatistics, SendMessageOption, User } from 'chaite'
+import { BaseClientOptions, ChaiteStorage, Channel, ChannelStatistics, User } from 'chaite'
 import sqlite3 from 'sqlite3'
 import path from 'path'
 import fs from 'fs'

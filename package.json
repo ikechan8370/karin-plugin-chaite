@@ -18,7 +18,9 @@
     "pub": "npm publish --access public",
     "dev": "cross-env EBV_FILE=\"development.env\" node --import tsx src/app.ts",
     "karin": "karin",
-    "sync": "curl -X PUT \"https://registry-direct.npmmirror.com/-/package/karin-plugin-chaite/syncs\""
+    "sync": "curl -X PUT \"https://registry-direct.npmmirror.com/-/package/karin-plugin-chaite/syncs\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "main": "lib/index.js",
   "devDependencies": {

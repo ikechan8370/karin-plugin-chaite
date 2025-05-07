@@ -1,29 +1,29 @@
-import { LocalIndex } from 'vectra';
-import { md5 } from '../../utils/common.js';
-import { VectorDatabase } from 'chaite';
+import { LocalIndex } from 'vectra'
+import { md5 } from '../../utils/common.js'
+import { VectorDatabase } from 'chaite'
 
 /**
  * 基于Vectra实现的简单向量数据库，作为默认实现
  * @implements {VectorDatabase}
  */
 export class VectraVectorDatabase implements VectorDatabase {
-  private index: LocalIndex;
+  private index: LocalIndex
 
   /**
    * 构造函数
    * @param indexFile 索引文件路径
    */
-  constructor(indexFile: string) {
-    this.index = new LocalIndex(indexFile);
+  constructor (indexFile: string) {
+    this.index = new LocalIndex(indexFile)
   }
 
   /**
    * 初始化向量数据库
    * @returns Promise<void>
    */
-  async init(): Promise<void> {
+  async init (): Promise<void> {
     if (!(await this.index.isIndexCreated())) {
-      await this.index.createIndex();
+      await this.index.createIndex()
     }
   }
 
@@ -33,14 +33,14 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param text 关联文本
    * @returns Promise<string> 返回向量ID
    */
-  async addVector(vector: number[], text: string): Promise<string> {
-    const id = md5(text);
+  async addVector (vector: number[], text: string): Promise<string> {
+    const id = md5(text)
     await this.index.insertItem({
       vector,
       id,
       metadata: { text }
-    });
-    return id;
+    })
+    return id
   }
 
   /**
@@ -49,8 +49,8 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param texts 关联文本数组
    * @returns Promise<string[]> 返回向量ID数组
    */
-  async addVectors(vectors: number[][], texts: string[]): Promise<string[]> {
-    return await Promise.all(vectors.map((v, i) => this.addVector(v, texts[i])));
+  async addVectors (vectors: number[][], texts: string[]): Promise<string[]> {
+    return await Promise.all(vectors.map((v, i) => this.addVector(v, texts[i])))
   }
 
   /**
@@ -59,13 +59,13 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param k 返回结果数量
    * @returns Promise<Array<{ id: string, score: number, text: string }>> 返回搜索结果
    */
-  async search(queryVector: number[], k: number): Promise<Array<{ id: string; score: number; text: string }>> {
-    const results = await this.index.queryItems(queryVector, k);
-    return results.map(r => ({ 
-      id: r.item.id, 
-      score: r.score, 
-      text: String(r.item.metadata.text) 
-    }));
+  async search (queryVector: number[], k: number): Promise<Array<{ id: string; score: number; text: string }>> {
+    const results = await this.index.queryItems(queryVector, k)
+    return results.map(r => ({
+      id: r.item.id,
+      score: r.score,
+      text: String(r.item.metadata.text)
+    }))
   }
 
   /**
@@ -73,18 +73,18 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param id 向量ID
    * @returns Promise<{ vector: number[], text: string } | null> 返回向量和关联文本，或 null
    */
-  async getVector(id: string): Promise<{ vector: number[]; text: string } | null> {
+  async getVector (id: string): Promise<{ vector: number[]; text: string } | null> {
     try {
-      const result = await this.index.getItem(id);
+      const result = await this.index.getItem(id)
       if (!result) {
-        return null;
+        return null
       }
       return {
         vector: result.vector,
         text: String(result.metadata.text)
-      };
+      }
     } catch (error) {
-      return null;
+      return null
     }
   }
 
@@ -93,9 +93,9 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param id 向量ID
    * @returns Promise<boolean> 是否成功删除
    */
-  async deleteVector(id: string): Promise<boolean> {
-    await this.index.deleteItem(id);
-    return true;
+  async deleteVector (id: string): Promise<boolean> {
+    await this.index.deleteItem(id)
+    return true
   }
 
   /**
@@ -105,28 +105,28 @@ export class VectraVectorDatabase implements VectorDatabase {
    * @param newText 新文本
    * @returns Promise<boolean> 是否成功更新
    */
-  async updateVector(id: string, newVector: number[], newText: string): Promise<boolean> {
+  async updateVector (id: string, newVector: number[], newText: string): Promise<boolean> {
     await this.index.upsertItem({
       id,
       vector: newVector,
       metadata: { text: newText }
-    });
-    return true;
+    })
+    return true
   }
 
   /**
    * 获取向量总数
    * @returns Promise<number> 向量总数
    */
-  async count(): Promise<number> {
-    return (await this.index.getIndexStats()).items;
+  async count (): Promise<number> {
+    return (await this.index.getIndexStats()).items
   }
 
   /**
    * 清空向量数据库
    * @returns Promise<void>
    */
-  async clear(): Promise<void> {
-    await this.index.deleteIndex();
+  async clear (): Promise<void> {
+    await this.index.deleteIndex()
   }
 }

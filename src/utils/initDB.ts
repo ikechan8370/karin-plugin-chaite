@@ -5,17 +5,17 @@ import {
   BaseClientOptions,
   Chaite,
   Channel,
-  ProcessorDTO,
+  // ProcessorDTO,
   SendMessageOption,
   User,
-  ProcessorsManager,
+  // ProcessorsManager,
   ChatPreset, ToolsGroupDTO
 } from 'chaite'
 import { logger } from 'node-karin'
-import fs from 'fs'
-import path from 'path'
+// import fs from 'fs'
+// import path from 'path'
 import { md5 } from './common.js'
-import { dirPath } from './dir.js'
+// import { dirPath } from './dir.js'
 
 /**
  * 默认系统用户
@@ -33,31 +33,31 @@ const systemUser: User = {
  * @param name - 处理器名称
  * @param description - 处理器描述
  */
-async function addEmbeddedProcessor (
-  resourcesDir: string,
-  processorsManager: ProcessorsManager,
-  type: 'pre' | 'post',
-  name: string,
-  description: string
-): Promise<void> {
-  const codeBuf = fs.readFileSync(path.resolve(resourcesDir, name))
-  const code = Buffer.from(codeBuf.toString(), 'base64').toString()
-  await processorsManager.addInstance(new ProcessorDTO({
-    id: md5(name),
-    type,
-    name,
-    uploader: systemUser,
-    description,
-    code
-  }))
-}
+// async function addEmbeddedProcessor (
+//   resourcesDir: string,
+//   processorsManager: ProcessorsManager,
+//   type: 'pre' | 'post',
+//   name: string,
+//   description: string
+// ): Promise<void> {
+//   const codeBuf = fs.readFileSync(path.resolve(resourcesDir, name))
+//   const code = Buffer.from(codeBuf.toString(), 'base64').toString()
+//   await processorsManager.addInstance(new ProcessorDTO({
+//     id: md5(name),
+//     type,
+//     name,
+//     uploader: systemUser,
+//     description,
+//     code
+//   }))
+// }
 
 /**
  * 迁移和初始化数据库
  */
 export async function migrateDatabase (): Promise<void> {
   logger.debug('检查数据库初始化...')
-  const resourcesDir = path.resolve(dirPath, 'resources/embedded')
+  // const resourcesDir = path.resolve(dirPath, 'resources/embedded')
 
   // 1. 设置初始化的预处理器
   // const processorsManager = Chaite.getInstance().getProcessorsManager()
@@ -132,7 +132,7 @@ export async function migrateDatabase (): Promise<void> {
   }
 
   // 5. 扫描同步工具
-  const toolManager = Chaite.getInstance().getToolsManager()
+  // const toolManager = Chaite.getInstance().getToolsManager()
   // Note: This step doesn't appear to do anything in the original code, keeping it for consistency
 
   logger.info('初始化内置的工具组')

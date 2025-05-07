@@ -1,6 +1,6 @@
 /* eslint-disable @stylistic/semi */
 import { Chaite, UserMessage, ChatPreset, MessageContent, TextContent, ImageContent, AudioContent, ReasoningContent } from 'chaite';
-import { logger, segment, Message, Elements } from 'node-karin';
+import { logger, segment, Message, Elements, common, NodeElement } from 'node-karin';
 import axios from 'node-karin/axios';
 
 /**
@@ -187,17 +187,14 @@ export function checkChatMsg (
 
 /**
  * 模型响应转为机器人格式
- * @param e 事件对象
  * @param contents 消息内容数组
- * @returns Promise<{ msgs: Array<TextElem | ImageElem | AtElem | PttElem | string>, forward: any[] }> 返回转换后的消息
+ * @returns Promise<{ msgs: Array<TextElem | ImageElem | AtElem | PttElem | string>, forward: NodeElement[][] }> 返回转换后的消息
  */
-export async function toYunzai (
-  e: any, // 假设 e 的类型未知，可以根据实际情况替换为具体类型
+export async function toKarin (
   contents: MessageContent[]
-): Promise<{ msgs: Array<any>; forward: any[] }> {
-  // 假设 icqq 的类型，如果有具体类型定义，请替换
+): Promise<{ msgs: Array<any>; forward: NodeElement[][] }> {
   const msgs: Array<any> = [];
-  const forward: any[] = [];
+  const forward: NodeElement[][] = [];
 
   for (const content of contents) {
     switch (content.type) {
@@ -214,7 +211,7 @@ export async function toYunzai (
         break;
       }
       case 'reasoning': {
-        const reasoning = await (common as any).makeForwardMsg(e, [(content as ReasoningContent).text], '思考过程');
+        const reasoning = common.makeForward([(content as ReasoningContent).text], '思考过程');
         forward.push(reasoning);
         break;
       }
@@ -227,30 +224,4 @@ export async function toYunzai (
     msgs: msgs.filter(i => !!i),
     forward
   };
-}
-
-// 假设 common 是一个全局对象，用于创建转发消息
-declare const common: {
-  makeForwardMsg: (e: any, messages: string[], title: string) => Promise<any>;
-};
-
-// 假设 icqq 的类型，如果有具体类型定义，请替换
-interface TextElem {
-  type: 'text';
-  text: string;
-}
-
-interface ImageElem {
-  type: 'image';
-  file: string | Buffer;
-}
-
-interface AtElem {
-  type: 'at';
-  qq: number | string;
-}
-
-interface PttElem {
-  type: 'ptt';
-  file: string | Buffer;
 }
