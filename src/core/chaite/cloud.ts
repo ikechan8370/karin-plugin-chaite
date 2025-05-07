@@ -213,7 +213,7 @@ export async function initChaite (): Promise<void> {
   const processorsManager = await ProcessorsManager.init(processorsDir, processorsStorage)
   const chatPresetManager = await ChatPresetManager.init(chatPresetsStorage)
   const toolsGroupManager = await ToolsGroupManager.init(toolsGroupStorage)
-  const triggersDir = path.resolve(dir, 'src', config().chaite.toolsDirPath)
+  const triggersDir = path.resolve(dir, 'src', config().chaite.triggersDirPath)
   if (!fs.existsSync(triggersDir)) {
     fs.mkdirSync(triggersDir, { recursive: true })
   }
