@@ -1,6 +1,7 @@
+/* eslint-disable @stylistic/semi */
 import { Chaite, UserMessage, ChatPreset, MessageContent, TextContent, ImageContent, AudioContent, ReasoningContent } from 'chaite';
-import fetch from 'node-fetch';
 import { logger, segment, Message, Elements } from 'node-karin';
+import axios from 'node-karin/axios';
 
 /**
  * 将e中的消息转换为chaite的UserMessage
@@ -8,7 +9,7 @@ import { logger, segment, Message, Elements } from 'node-karin';
  * @param options 配置选项
  * @returns Promise<UserMessage> 返回用户消息对象
  */
-export async function intoUserMessage(
+export async function intoUserMessage (
   e: Message,
   options: {
     handleReplyText?: boolean;
@@ -38,14 +39,14 @@ export async function intoUserMessage(
   if ((e.replyId) && (handleReplyImage || handleReplyText || handleReplyFile)) {
     const reply = await e.bot.getMsg(e.contact, e.replyId)
     if (reply) {
-      for (let val of reply.elements) {
+      for (const val of reply.elements) {
         if (val.type === 'image' && handleReplyImage) {
-          const res = await fetch(val.file);
-          if (res.ok) {
-            const mimeType = res.headers.get('content-type') || 'image/jpeg';
+          const res = await axios.get(val.file, { responseType: 'arraybuffer' });
+          if (res.status === 200) {
+            const mimeType = res.headers['content-type'] || 'image/jpeg';
             contents.push({
               type: 'image',
-              image: Buffer.from(await res.arrayBuffer()).toString('base64'),
+              image: Buffer.from(res.data).toString('base64'),
               mimeType
             } as ImageContent);
           } else {
@@ -65,7 +66,7 @@ export async function intoUserMessage(
   if (useRawMessage) {
     text += e.rawMessage || '';
   } else {
-    for (let val of e.elements || []) {
+    for (const val of e.elements || []) {
       switch (val.type) {
         case 'at': {
           if (handleAtMsg) {
@@ -87,13 +88,13 @@ export async function intoUserMessage(
     }
   }
 
-  for (let element of e.elements?.filter((element: Elements) => element.type === 'image') || []) {
-    const res = await fetch(element.file);
-    if (res.ok) {
-      const mimeType = res.headers.get('content-type') || 'image/jpeg';
+  for (const element of e.elements?.filter((element: Elements) => element.type === 'image') || []) {
+    const res = await axios.get(element.file, { responseType: 'arraybuffer' });
+    if (res.status === 200) {
+      const mimeType = res.headers['content-type'] || 'image/jpeg';
       contents.push({
         type: 'image',
-        image: Buffer.from(await res.arrayBuffer()).toString('base64'),
+        image: Buffer.from(res.data).toString('base64'),
         mimeType
       } as ImageContent);
     } else {
@@ -127,7 +128,7 @@ export async function intoUserMessage(
  * @param togglePrefix 触发前缀
  * @returns Promise<ChatPreset | null> 返回预设对象或 null
  */
-export async function getPreset(
+export async function getPreset (
   e: Message, // 假设 e 的类型未知，可以根据实际情况替换为具体类型
   presetId: string,
   toggleMode: 'at' | 'prefix',
@@ -169,7 +170,7 @@ export async function getPreset(
  * @param togglePrefix 触发前缀
  * @returns boolean 是否符合聊天条件
  */
-export function checkChatMsg(
+export function checkChatMsg (
   e: any, // 假设 e 的类型未知，可以根据实际情况替换为具体类型
   toggleMode: 'at' | 'prefix',
   togglePrefix: string
@@ -190,7 +191,7 @@ export function checkChatMsg(
  * @param contents 消息内容数组
  * @returns Promise<{ msgs: Array<TextElem | ImageElem | AtElem | PttElem | string>, forward: any[] }> 返回转换后的消息
  */
-export async function toYunzai(
+export async function toYunzai (
   e: any, // 假设 e 的类型未知，可以根据实际情况替换为具体类型
   contents: MessageContent[]
 ): Promise<{ msgs: Array<any>; forward: any[] }> {
@@ -198,7 +199,7 @@ export async function toYunzai(
   const msgs: Array<any> = [];
   const forward: any[] = [];
 
-  for (let content of contents) {
+  for (const content of contents) {
     switch (content.type) {
       case 'text': {
         msgs.push((content as TextContent).text?.trim() || '');
