@@ -94,6 +94,8 @@ chaite:
   processorsDirPath: "utils/processors"
   # 工具目录路径
   toolsDirPath: "utils/tools"
+  # 触发器目录路径
+  triggersDirPath: "utils/triggers"
   # 云服务基础URL
   cloudBaseUrl: "https://api.chaite.cloud"
   # 云API密钥

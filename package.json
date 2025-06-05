@@ -25,14 +25,14 @@
   "main": "lib/index.js",
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.17.8",
+    "@types/node": "^20.17.30",
     "cross-env": "^7.0.3",
-    "eslint": "^9.7.0",
+    "eslint": "^9.25.1",
     "neostandard": "^0.11.9",
-    "node-karin": "^1.8.8",
-    "tsc-alias": "^1.8.10",
-    "tsx": "^4.19.2",
-    "typescript": "^5.5.3"
+    "node-karin": "^1.9.11",
+    "tsc-alias": "^1.8.15",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
   },
   "karin": {
     "main": "src/index.ts",
@@ -70,7 +70,7 @@
     "vectra": "0.9.0"
   },
   "peerDependencies": {
-    "chaite": "^1.4.0",
+    "chaite": "^1.5.3",
     "sqlite3": "^5.1.6"
   }
 }

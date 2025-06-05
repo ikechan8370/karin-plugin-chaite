@@ -28,13 +28,23 @@ if (!fs.existsSync(dirConfig)) {
  */
 copyConfigSync(defConfig, dirConfig, ['.yaml'])
 
+function mergeConfig (def: ChatGPTConfig, cfg: ChatGPTConfig): ChatGPTConfig {
+  return {
+    basic: { ...def.basic, ...cfg.basic },
+    bym: { ...def.bym, ...cfg.bym },
+    llm: { ...def.llm, ...cfg.llm },
+    management: { ...def.management, ...cfg.management },
+    chaite: { ...def.chaite, ...cfg.chaite },
+  }
+}
+
 /**
  * @description 配置文件
  */
 export const config = () => {
   const cfg = requireFileSync(`${dirConfig}/config.yaml`)
   const def = requireFileSync(`${defConfig}/config.yaml`)
-  const data = { ...def, ...cfg } as ChatGPTConfig
+  const data = mergeConfig(def as ChatGPTConfig, cfg as ChatGPTConfig)
   return Object.assign({}, data, {
     save: () => {
       yaml.save(`${dirConfig}/config.yaml`, data)
