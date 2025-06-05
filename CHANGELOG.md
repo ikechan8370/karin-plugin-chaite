@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.5...v1.1.6) (2025-06-05)
+
+
+### Bug Fixes
+
+* error caused by triggersPath config ([498e6a3](https://github.com/ikechan8370/karin-plugin-chaite/commit/498e6a3659f8c26a1ff489b587c1594c4e2d937a))
+
 ## [1.1.5](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.4...v1.1.5) (2025-05-07)
 
 
