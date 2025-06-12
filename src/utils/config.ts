@@ -9,7 +9,7 @@ import {
   requireFileSync,
   yaml,
   fs,
-  karinPathData,
+  karinPathData, clearRequireFile,
 } from 'node-karin'
 import path from 'path'
 
@@ -48,6 +48,7 @@ export const config = () => {
   return Object.assign({}, data, {
     save: () => {
       yaml.save(`${dirConfig}/config.yaml`, data)
+      clearRequireFile(`${dirConfig}/config.yaml`)
     }
   }) as ChatGPTConfig & {
     save: () => void
