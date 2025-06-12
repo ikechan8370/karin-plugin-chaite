@@ -13,58 +13,49 @@ export class KarinGroupContextCollector extends GroupContextCollector {
      * 获取群组上下文
      * @param {GroupMessage} e
      * @param {string} groupId
-     * @param {string} start
+     * @param {string | number} start
      * @param {number} length
      * @returns {Promise<Array<MessageResponse>>}
      */
-  async collect (e: GroupMessage, groupId: string, start: string = '', length: number = 20): Promise<Array<MessageResponse>> {
-    const latestChats = await e.bot.getHistoryMsg(e.contact, start, 1)
-    if (latestChats.length > 0) {
-      const latestChat = latestChats[0]
-      if (latestChat) {
-        let seq = latestChat.messageId
-        let chats: MessageResponse[] = []
-        while (chats.length < length) {
-          const chatHistory = await e.bot.getHistoryMsg(e.contact, seq, 20)
-          if (!chatHistory || chatHistory.length === 0) {
-            break
-          }
-          chats.push(...chatHistory.reverse())
-          if (seq === chatHistory[chatHistory.length - 1].messageId) {
-            break
-          }
-          seq = chatHistory[chatHistory.length - 1].messageId
-        }
-        chats = chats.slice(0, length).reverse()
-        try {
-          const members = await e.bot.getGroupMemberList(e.groupId)
-          const mm = new Map()
-          for (const member of members) {
-            mm.set(member.userId, member)
-          }
-          for (const chat of chats) {
-            const sender = mm.get(chat.sender.userId)
-            if (sender) {
-              chat.sender = sender
-            }
-          }
-        } catch (err) {
-          logger.warn(err)
-        }
-        // console.log(chats)
-        return chats
+  async collect (e: GroupMessage, groupId: string, start: string | number = '', length: number = 20): Promise<Array<MessageResponse>> {
+    let chats: MessageResponse[] = []
+    while (chats.length < length) {
+      const chatHistory = await e.bot.getHistoryMsg(e.contact, start as any, 20)
+      if (!chatHistory || chatHistory.length === 0) {
+        break
       }
+      chats.push(...chatHistory.reverse())
+      if (start === chatHistory[chatHistory.length - 1].messageId) {
+        break
+      }
+      start = chatHistory[chatHistory.length - 1].messageId
     }
-    // }
-    return []
+    chats = chats.slice(0, length).reverse()
+    try {
+      const members = await e.bot.getGroupMemberList(e.groupId)
+      const mm = new Map()
+      for (const member of members) {
+        mm.set(member.userId, member)
+      }
+      for (const chat of chats) {
+        const sender = mm.get(chat.sender.userId)
+        if (sender) {
+          chat.sender = sender
+        }
+      }
+    } catch (err) {
+      logger.warn(err)
+    }
+    return chats
   }
+
 }
 
 /**
  * 获取群组上下文
  */
 export async function getGroupHistory (e: GroupMessage, length = 20): Promise<Array<MessageResponse>> {
-  return await new KarinGroupContextCollector().collect(e, e.groupId, '0', length)
+  return await new KarinGroupContextCollector().collect(e, e.groupId, e.messageId || e.messageSeq, length)
 }
 
 /**

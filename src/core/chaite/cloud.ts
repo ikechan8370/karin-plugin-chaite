@@ -285,7 +285,7 @@ export async function initChaite (): Promise<void> {
   chaite.getGlobalConfig()?.setHost(config().chaite.host)
   chaite.getGlobalConfig()?.setPort(config().chaite.port)
   chaite.getGlobalConfig()?.setDebug(config().basic.debug)
-  logger.info('Chaite.RAGManager 初始化完成')
+  // logger.info('Chaite.RAGManager 初始化完成')
   chaite.runApiServer()
 }
 

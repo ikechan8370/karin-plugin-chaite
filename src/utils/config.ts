@@ -59,15 +59,15 @@ export const config = () => {
  */
 export const pkg = () => requireFileSync(`${dirPath}/package.json`)
 
-/**
- * @description 监听配置文件
- */
-setTimeout(() => {
-  const list = filesByExt(dirConfig, '.yaml', 'abs')
-  list.forEach(file => watch(file, (old, now) => {
-    logger.info('旧数据:', old)
-    logger.info('新数据:', now)
-  }))
-}, 2000)
+// /**
+//  * @description 监听配置文件
+//  */
+// setTimeout(() => {
+//   const list = filesByExt(dirConfig, '.yaml', 'abs')
+//   list.forEach(file => watch(file, (old, now) => {
+//     logger.info('旧数据:', old)
+//     logger.info('新数据:', now)
+//   }))
+// }, 2000)
 
 export const dataDir = path.resolve(karinPathData, config().chaite.dataDir)
