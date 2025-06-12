@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.8](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.7...v1.1.8) (2025-06-12)
+
+
+### Bug Fixes
+
+* config cache ([acb9a1c](https://github.com/ikechan8370/karin-plugin-chaite/commit/acb9a1c52dc6c91788c63aaa9008290b8d74d07e))
+
 ## [1.1.7](https://github.com/ikechan8370/karin-plugin-chaite/compare/v1.1.6...v1.1.7) (2025-06-12)
 
 
